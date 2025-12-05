@@ -17,4 +17,21 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+// Example routes to add to routes/web.php
+Route::get('/assignments', function () {
+    return view('assignments'); // Create this Blade view
+})->middleware(['auth', 'verified'])->name('assignments');
+
+Route::get('/schedule', function () {
+    return view('schedule'); // Create this Blade view
+})->middleware(['auth', 'verified'])->name('schedule');
+
+Route::get('/discussions', function () {
+    return view('discussions'); // Create this Blade view
+})->middleware(['auth', 'verified'])->name('discussions');
+
+Route::get('/module-4', function () {
+    return view('module-4'); // Create this Blade view
+})->middleware(['auth', 'verified'])->name('module-4');
+
 require __DIR__.'/auth.php';

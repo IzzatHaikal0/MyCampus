@@ -10,11 +10,29 @@
                     </a>
                 </div>
 
-                <!-- Navigation Links -->
+                <!-- Navigation Links (Desktop) -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+
+                    {{-- NEW LINKS ADDED BELOW --}}
+                    <x-nav-link :href="route('assignments')" :active="request()->routeIs('assignments')">
+                        {{ __('Assignment') }}
+                    </x-nav-link>
+                    
+                    <x-nav-link :href="route('schedule')" :active="request()->routeIs('schedule')">
+                        {{ __('Schedule') }}
+                    </x-nav-link>
+                    
+                    <x-nav-link :href="route('discussions')" :active="request()->routeIs('discussions')">
+                        {{ __('Discussion') }}
+                    </x-nav-link>
+                    
+                    <x-nav-link :href="route('module-4')" :active="request()->routeIs('module-4')">
+                        {{ __('Module 4') }}
+                    </x-nav-link>
+                    {{-- END NEW LINKS --}}
                 </div>
             </div>
 
@@ -64,12 +82,30 @@
         </div>
     </div>
 
-    <!-- Responsive Navigation Menu -->
+    <!-- Responsive Navigation Menu (Mobile) -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+            
+            {{-- NEW RESPONSIVE LINKS ADDED BELOW --}}
+            <x-responsive-nav-link :href="route('assignments')" :active="request()->routeIs('assignments')">
+                {{ __('Assignment') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('schedule')" :active="request()->routeIs('schedule')">
+                {{ __('Schedule') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('discussions')" :active="request()->routeIs('discussions')">
+                {{ __('Discussion') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('module-4')" :active="request()->routeIs('module-4')">
+                {{ __('Module 4') }}
+            </x-responsive-nav-link>
+            {{-- END NEW RESPONSIVE LINKS --}}
         </div>
 
         <!-- Responsive Settings Options -->
