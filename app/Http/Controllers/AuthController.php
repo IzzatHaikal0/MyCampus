@@ -15,13 +15,7 @@ class AuthController extends Controller
 
     public function __construct()
     {
-        $credentialsPath = env('FIREBASE_CREDENTIALS');
-
-        if (empty($credentialsPath)) {
-            throw new \Exception("FIREBASE_CREDENTIALS path not defined in .env");
-        }
-
-        $credentialsPath = realpath($credentialsPath);
+        $credentialsPath = realpath(env('FIREBASE_CREDENTIALS'));
 
         if (!$credentialsPath || !file_exists($credentialsPath)) {
             throw new \Exception("Firebase credentials not found at: {$credentialsPath}");
@@ -35,11 +29,17 @@ class AuthController extends Controller
         $this->database = $firebase->createDatabase();
     }
 
+    /**
+     * Show the registration form.
+     */
     public function showRegisterForm()
     {
         return view('auth.register');
     }
 
+    /**
+     * Handle registration.
+     */
     public function register(Request $request)
     {
         $request->validate([
@@ -50,6 +50,7 @@ class AuthController extends Controller
         ]);
 
         try {
+            // Create Firebase user
             $user = $this->auth->createUser([
                 'email' => $request->email,
                 'emailVerified' => false,
@@ -60,7 +61,8 @@ class AuthController extends Controller
 
             $uid = $user->uid;
 
-            $this->database->getReference('users/'.$uid)->set([
+            // Save user details in Firebase Realtime Database
+            $this->database->getReference("users/{$uid}")->set([
                 'name' => $request->name,
                 'email' => $request->email,
                 'role' => $request->role,
@@ -72,15 +74,21 @@ class AuthController extends Controller
         } catch (\Kreait\Firebase\Exception\Auth\EmailExists $e) {
             return back()->withErrors(['email' => 'Email already exists.']);
         } catch (\Exception $e) {
-            return back()->withErrors(['general' => 'Registration failed: '.$e->getMessage()]);
+            return back()->withErrors(['general' => 'Registration failed: ' . $e->getMessage()]);
         }
     }
 
+    /**
+     * Show the login form.
+     */
     public function showLoginForm()
     {
         return view('auth.login');
     }
 
+    /**
+     * Handle login and redirect based on role.
+     */
     public function login(Request $request)
     {
         $request->validate([
@@ -99,6 +107,7 @@ class AuthController extends Controller
 
             $role = $this->database->getReference("users/{$uid}/role")->getValue() ?? 'student';
 
+            // Save user session
             Session::put('firebase_user', [
                 'uid' => $uid,
                 'email' => $firebaseUser['email'],
@@ -106,12 +115,14 @@ class AuthController extends Controller
                 'role' => $role,
             ]);
 
-            if ($role === 'administrator') {
-                return redirect()->route('admin.dashboard')->with('success', 'Welcome Administrator!');
-            } elseif ($role === 'teacher') {
-                return redirect()->route('teacher.dashboard')->with('success', 'Welcome Teacher!');
-            } else {
-                return redirect()->route('student.dashboard')->with('success', 'Welcome Student!');
+            // Redirect to dashboard based on role
+            switch ($role) {
+                case 'administrator':
+                    return redirect()->route('admin.dashboard')->with('success', 'Welcome Administrator!');
+                case 'teacher':
+                    return redirect()->route('teacher.dashboard')->with('success', 'Welcome Teacher!');
+                default:
+                    return redirect()->route('student.dashboard')->with('success', 'Welcome Student!');
             }
 
         } catch (InvalidPassword $e) {
@@ -119,10 +130,13 @@ class AuthController extends Controller
         } catch (UserNotFound $e) {
             return back()->withErrors(['email' => 'User not found.']);
         } catch (\Exception $e) {
-            return back()->withErrors(['general' => 'Login failed: '.$e->getMessage()]);
+            return back()->withErrors(['general' => 'Login failed: ' . $e->getMessage()]);
         }
     }
 
+    /**
+     * Logout user and clear session.
+     */
     public function logout()
     {
         Session::forget('firebase_user');
