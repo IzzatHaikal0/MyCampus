@@ -1,0 +1,17 @@
+/* public/css/app.css */
+body {
+    background-color: lightblue; /* Temporary test */
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+header {
+    background: #333;
+    color: white;
+    padding: 1rem;
+}
+
+.sidebar {
+    background: #f4f4f4;
+    padding: 1rem;
+}
