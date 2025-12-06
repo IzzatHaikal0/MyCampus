@@ -22,5 +22,4 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
-# Add this line to your .gitignore file
-/mycampus-97976-firebase-adminsdk-fbsvc-f596c5f13b.json
+storage/app/mycampus-f7b98-firebase-adminsdk-fbsvc-bdfda013a7.json
