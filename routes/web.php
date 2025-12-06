@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LessonController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AssignmentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,9 +46,13 @@ Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.
 | Teacher Routes
 |--------------------------------------------------------------------------
 */
-Route::get('/teacher/dashboard', fn() => view('teacher.dashboard'))->name('teacher.dashboard');
+Route::get('/teacher/dashboard', action: fn() => view('teacher.dashboard'))->name('teacher.dashboard');
 Route::get('/lessons/add', [LessonController::class, 'create'])->name('lessons.add');
 Route::post('/lessons/store', [LessonController::class, 'store'])->name('lessons.store');
+
+
+Route::get('/assignments/list', [AssignmentController::class, 'list'])->name('assignments.list');
+Route::get('/assignments/add', [AssignmentController::class, 'create'])->name('assignments.add');
 
 /*
 |--------------------------------------------------------------------------
