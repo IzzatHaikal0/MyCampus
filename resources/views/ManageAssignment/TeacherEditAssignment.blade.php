@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Assignment - ClassConnect</title>
+    <title>Edit Assignment - ClassConnect</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -19,7 +19,7 @@
                 <div class="flex justify-between items-center">
                     <div class="flex items-center gap-3 text-gray-600">
                         <i class="fas fa-home"></i>
-                        <span> > Add New Assignment</span>
+                        <span> > Edit Assignment</span>
                     </div>
                     <div class="flex items-center gap-6">
                         <button class="relative text-gray-600 hover:text-purple-600 transition">
@@ -37,30 +37,31 @@
 
             <!-- Flash Messages -->
             @if(session('success'))
-                <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-lg mb-6 flex items-center gap-3">
+                <div class="flash-message bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-lg mb-6 flex items-center gap-3 transition-opacity duration-500">
                     <i class="fas fa-check-circle"></i>
                     <span>{{ session('success') }}</span>
                 </div>
             @endif
 
             @if(session('error'))
-                <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg mb-6 flex items-center gap-3">
+                <div class="flash-message bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg mb-6 flex items-center gap-3 transition-opacity duration-500">
                     <i class="fas fa-exclamation-circle"></i>
                     <span>{{ session('error') }}</span>
                 </div>
             @endif 
 
-            <!-- Add Assignment Form -->
+            <!-- Edit Assignment Form -->
             <div class="bg-white rounded-2xl shadow-lg p-8">
                 <div class="mb-6">
                     <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
-                        <i class="fas fa-plus-circle text-purple-600"></i>
-                        Add New Assignment
+                        <i class="fas fa-edit text-purple-600"></i>
+                        Edit Assignment
                     </h2>
                 </div>
 
-                <form action="{{ route('assignments.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+                <form action="{{ route('assignments.update', $assignment['id']) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                     @csrf
+                    @method('POST')
 
                     <!-- Assignment Name -->
                     <div>
@@ -74,7 +75,7 @@
                             required
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
                             placeholder="Enter assignment name"
-                            value="{{ old('assignment_name') }}"
+                            value="{{ old('assignment_name', $assignment['assignment_name']) }}"
                         >
                         @error('assignment_name')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -93,7 +94,7 @@
                             required
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition resize-none"
                             placeholder="Provide detailed instructions for the assignment..."
-                        >{{ old('description') }}</textarea>
+                        >{{ old('description', $assignment['description']) }}</textarea>
                         @error('description')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
@@ -111,7 +112,7 @@
                                 name="due_date" 
                                 required
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                                value="{{ old('due_date') }}"
+                                value="{{ old('due_date', $assignment['due_date']) }}"
                             >
                             @error('due_date')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -128,7 +129,7 @@
                                 name="due_time" 
                                 required
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                                value="{{ old('due_time') }}"
+                                value="{{ old('due_time', $assignment['due_time']) }}"
                             >
                             @error('due_time')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -149,17 +150,37 @@
                             min="0"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
                             placeholder="e.g., 100"
-                            value="{{ old('total_points', 100) }}"
+                            value="{{ old('total_points', $assignment['total_points']) }}"
                         >
                         @error('total_points')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
 
+                    <!-- Current Attachment Display -->
+                    @if(isset($assignment['attachment_path']) && $assignment['attachment_path'])
+                        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <i class="fas fa-file text-blue-600 text-2xl"></i>
+                                    <div>
+                                        <p class="text-sm font-semibold text-gray-700">Current Attachment:</p>
+                                        <p class="text-sm text-gray-600">{{ basename($assignment['attachment_path']) }}</p>
+                                    </div>
+                                </div>
+                                <a href="{{ asset('storage/' . $assignment['attachment_path']) }}" 
+                                   target="_blank" 
+                                   class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-sm font-medium">
+                                    <i class="fas fa-eye"></i> View File
+                                </a>
+                            </div>
+                        </div>
+                    @endif
+
                     <!-- File Attachment (Optional) -->
                     <div>
                         <label for="attachment" class="block text-sm font-semibold text-gray-700 mb-2">
-                            Attachment (Optional)
+                            {{ isset($assignment['attachment_path']) ? 'Replace Attachment (Optional)' : 'Attachment (Optional)' }}
                         </label>
                         <div class="flex items-center justify-center w-full">
                             <label for="attachment" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
@@ -169,6 +190,9 @@
                                         <span class="font-semibold">Click to upload</span> or drag and drop
                                     </p>
                                     <p class="text-xs text-gray-500">PDF, DOC, DOCX, PPT, or images (MAX. 10MB)</p>
+                                    @if(isset($assignment['attachment_path']))
+                                        <p class="text-xs text-purple-600 mt-1">Leave empty to keep current file</p>
+                                    @endif
                                 </div>
                                 <input 
                                     id="attachment" 
@@ -192,8 +216,8 @@
                             type="submit" 
                             class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
                         >
-                            <i class="fas fa-check-circle"></i>
-                            Create Assignment
+                            <i class="fas fa-save"></i>
+                            Update Assignment
                         </button>
                         <a 
                             href="{{ route('assignments.list') }}" 
@@ -237,11 +261,19 @@
         function displayFileName(input) {
             const fileNameDisplay = document.getElementById('file-name');
             if (input.files && input.files[0]) {
-                fileNameDisplay.textContent = '📎 Selected: ' + input.files[0].name;
+                fileNameDisplay.textContent = '📎 New file selected: ' + input.files[0].name;
             } else {
                 fileNameDisplay.textContent = '';
             }
         }
+
+        // Auto-hide flash messages after 5 seconds
+        document.querySelectorAll('.flash-message').forEach(message => {
+            setTimeout(() => {
+                message.style.opacity = '0';
+                setTimeout(() => message.remove(), 500);
+            }, 5000);
+        });
     </script>
 </body>
 </html>
