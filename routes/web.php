@@ -52,7 +52,12 @@ Route::post('/lessons/store', [LessonController::class, 'store'])->name('lessons
 
 
 Route::get('/assignments/list', [AssignmentController::class, 'list'])->name('assignments.list');
-Route::get('/assignments/add', [AssignmentController::class, 'create'])->name('assignments.add');
+Route::get('/assignments/add', [AssignmentController::class, 'create'])->name('assignments.create');
+Route::post('/assignments/store', [AssignmentController::class,'store'])->name('assignments.store');
+Route::delete('/assignments/delete/{id}', [AssignmentController::class,'delete'])->name('assignments.delete');
+Route::get('/assignments/edit/{id}', [AssignmentController::class, 'edit'])->name('assignments.edit');
+Route::post('assignments/update/{id}', [AssignmentController::class,'update'])->name('assignments.update');
+
 
 /*
 |--------------------------------------------------------------------------

@@ -54,7 +54,7 @@
                     </a>
                 </li>
                 <li>
-                    <a href="{{ route('assignments.add') }}" class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl transition">
+                    <a href="{{ route('assignments.create') }}" class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl transition">
                         <i class="fas fa-file-alt text-lg w-5"></i>
                         <span class="sidebar-text">Add Assignment</span>
                     </a>
