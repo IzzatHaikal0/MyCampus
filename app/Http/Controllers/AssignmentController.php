@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Kreait\Firebase\Factory;
 use Kreait\Firebase\Database;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 
 class AssignmentController extends Controller
 {
@@ -28,29 +30,41 @@ class AssignmentController extends Controller
 
     public function list()
     {
+        $teacherId = $this->getFirebaseUserId(); 
+        
+        if (!$teacherId) {
+            return view('ManageAssignment.TeacherListAssignment')
+                ->with('error', 'Authentication failed. Please log in.');
+        }
+
         try {
-            // Fetch all assignments from Firebase
-            $assignmentsRef = $this->database->getReference('assignments')->getValue();
+            // Get ALL assignments
+            $allAssignments = $this->database->getReference('assignments')->getValue();
             
-            // Convert to array and add Firebase keys
             $assignments = [];
-            if ($assignmentsRef) {
-                foreach ($assignmentsRef as $key => $assignment) {
-                    $assignments[] = [
-                        'id' => $key,
-                        'assignment_name' => $assignment['assignment_name'] ?? '',
-                        'description' => $assignment['description'] ?? '',
-                        'due_date' => $assignment['due_date'] ?? '',
-                        'due_time' => $assignment['due_time'] ?? '',
-                        'total_points' => $assignment['total_points'] ?? 0,
-                        'attachment_path' => $assignment['attachment_path'] ?? null,
-                        'created_at' => $assignment['created_at'] ?? '',
-                    ];
+            
+            if ($allAssignments) {
+                foreach ($allAssignments as $key => $assignment) {
+                    // Filter by teacherId
+                    if (is_array($assignment) && isset($assignment['teacherId']) && $assignment['teacherId'] === $teacherId) {
+                        $assignments[] = [
+                            'id' => $key,
+                            'assignment_name' => $assignment['assignment_name'] ?? '',
+                            'description' => $assignment['description'] ?? '',
+                            'due_date' => $assignment['due_date'] ?? '',
+                            'due_time' => $assignment['due_time'] ?? '',
+                            'total_points' => $assignment['total_points'] ?? 0,
+                            'attachment_path' => $assignment['attachment_path'] ?? null,
+                            'created_at' => $assignment['created_at'] ?? '',
+                        ];
+                    }
                 }
                 
-                // Sort by due date (descending)
+                // Sort by due date
                 usort($assignments, function($a, $b) {
-                    return strtotime($b['due_date']) - strtotime($a['due_date']);
+                    $dateA = $a['due_date'] ? strtotime($a['due_date']) : 0;
+                    $dateB = $b['due_date'] ? strtotime($b['due_date']) : 0;
+                    return $dateB - $dateA;
                 });
             }
             
@@ -71,6 +85,13 @@ class AssignmentController extends Controller
     // Store Lesson in Firebase
     public function store(Request $request)
     {
+        $teacherId = $this->getFirebaseUserId(); 
+    
+        if (!$teacherId) {
+            // Now it properly checks the custom session status
+            return view('ManageAssignment.TeacherListAssignment')
+                ->with('error', 'Authentication failed. Please log in.');
+        }
         // Validate inputs
         $request->validate([
             'assignment_name' => 'required|string',
@@ -78,7 +99,7 @@ class AssignmentController extends Controller
             'due_date' => 'required|date',
             'due_time' => 'required|date_format:H:i',
             'total_points' => 'required|integer',
-            'attachment' => 'required|file|mimes:pdf,doc,docx|max:10240', // max 10MB
+            'attachment' => 'nullable|file|mimes:pdf,doc,docx|max:10240', // max 10MB
         ]);
 
         // Handle file upload
@@ -106,12 +127,17 @@ class AssignmentController extends Controller
             'total_points' => $request->total_points,
             'attachment_path' => $filePath, // Store file path
             'created_at' => now()->toDateTimeString(),
+            'teacherId' => $teacherId,
         ];
 
-        // Store assignment in Firebase
-        $ref = $this->database->getReference('assignments')->push($assignmentData);
+        try {
+            $this->database->getReference('assignments')->push($assignmentData);
 
-        return redirect()->route('assignments.list')->with('success', 'Assignment added successfully!');
+            return redirect()->route('assignments.list')->with('success', 'Assignment added successfully!');
+        } catch (\Exception $e) {
+            // Return to the previous form with the error message
+            return redirect()->back()->withInput()->with('error', 'Failed to save assignment to database: ' . $e->getMessage());
+        }
     }
 
     // Optional: Method to download/view attachment
@@ -166,12 +192,27 @@ class AssignmentController extends Controller
     public function edit(Request $request, $id)
     {
         try {
+            // Get the logged-in teacher's ID
+            $teacherId = $this->getFirebaseUserId();
+            
+            if (!$teacherId) {
+                return redirect()->route('assignments.list')
+                    ->with('error', 'Authentication failed. Please log in.');
+            }
+
             // Fetch assignment from Firebase
             $assignmentData = $this->database->getReference('assignments/' . $id)->getValue();
 
             // Check if assignment exists
             if (!$assignmentData) {
-                return redirect()->route('assignments.list')->with('error', 'Assignment not found!');
+                return redirect()->route('assignments.list')
+                    ->with('error', 'Assignment not found!');
+            }
+
+            //  Verify that the assignment belongs to the logged-in teacher
+            if (!isset($assignmentData['teacherId']) || $assignmentData['teacherId'] !== $teacherId) {
+                return redirect()->route('assignments.list')
+                    ->with('error', 'Unauthorized: You can only edit your own assignments!');
             }
 
             // Add the ID to the assignment array so it's available in the view
@@ -180,13 +221,23 @@ class AssignmentController extends Controller
             return view('ManageAssignment.TeacherEditAssignment', compact('assignment'));
             
         } catch (\Exception $e) {
-            return redirect()->route('assignments.list')->with('error', 'Failed to load assignment: ' . $e->getMessage());
+            \Log::error('Assignment edit error: ' . $e->getMessage());
+            return redirect()->route('assignments.list')
+                ->with('error', 'Failed to load assignment: ' . $e->getMessage());
         }
     }
 
     public function update(Request $request, $id)
     {
         try {
+            // Get the logged-in teacher's ID
+            $teacherId = $this->getFirebaseUserId();
+            
+            if (!$teacherId) {
+                return redirect()->route('assignments.list')
+                    ->with('error', 'Authentication failed. Please log in.');
+            }
+
             // Validate inputs
             $request->validate([
                 'assignment_name' => 'required|string|max:255',
@@ -194,7 +245,7 @@ class AssignmentController extends Controller
                 'due_date' => 'required|date',
                 'due_time' => 'required|date_format:H:i',
                 'total_points' => 'required|integer|min:0',
-                'attachment' => 'nullable|file|mimes:pdf,doc,docx,ppt,pptx,jpg,jpeg,png|max:10240', // 10MB max
+                'attachment' => 'nullable|file|mimes:pdf,doc,docx,ppt,pptx,jpg,jpeg,png|max:10240', 
             ]);
 
             // Get existing assignment data from Firebase
@@ -202,7 +253,14 @@ class AssignmentController extends Controller
             
             // Check if assignment exists
             if (!$existingAssignment) {
-                return redirect()->route('assignments.list')->with('error', 'Assignment not found!');
+                return redirect()->route('assignments.list')
+                    ->with('error', 'Assignment not found!');
+            }
+
+            // ✅ Verify that the assignment belongs to the logged-in teacher
+            if (!isset($existingAssignment['teacherId']) || $existingAssignment['teacherId'] !== $teacherId) {
+                return redirect()->route('assignments.list')
+                    ->with('error', 'Unauthorized: You can only update your own assignments!');
             }
 
             // Prepare updated assignment data
@@ -237,15 +295,21 @@ class AssignmentController extends Controller
                 }
             }
 
-            // Preserve created_at timestamp if it exists
+            // ✅ Preserve created_at timestamp
             if (isset($existingAssignment['created_at'])) {
                 $assignmentData['created_at'] = $existingAssignment['created_at'];
+            }
+
+            // ✅ Preserve teacherId - IMPORTANT: Don't lose the teacher association
+            if (isset($existingAssignment['teacherId'])) {
+                $assignmentData['teacherId'] = $existingAssignment['teacherId'];
             }
 
             // Update assignment in Firebase
             $this->database->getReference('assignments/' . $id)->set($assignmentData);
 
-            return redirect()->route('assignments.list')->with('success', 'Assignment updated successfully!');
+            return redirect()->route('assignments.list')
+                ->with('success', 'Assignment updated successfully!');
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()
@@ -253,9 +317,106 @@ class AssignmentController extends Controller
                 ->withInput();
                 
         } catch (\Exception $e) {
+            \Log::error('Assignment update error: ' . $e->getMessage());
             return redirect()->back()
                 ->with('error', 'Failed to update assignment: ' . $e->getMessage())
                 ->withInput();
         }
     }
+
+    // Add this helper method to your controller to get the UID from the session
+    protected function getFirebaseUserId()
+    {
+        // Check if the 'firebase_user' session key exists and has a 'uid'
+        return Session::get('firebase_user.uid');
+    }
+
+    public function viewStudentAssignment(Request $request)
+    {
+        try{
+            $allAssignments = $this->database->getReference('assignments')->getValue();
+            $assignments = [];
+
+            if ($allAssignments) {
+                foreach ($allAssignments as $key => $assignment) {
+                        $assignments[] = [
+                            'id' => $key,
+                            'assignment_name' => $assignment['assignment_name'] ?? '',
+                            'description' => $assignment['description'] ?? '',
+                            'due_date' => $assignment['due_date'] ?? '',
+                            'due_time' => $assignment['due_time'] ?? '',
+                            'total_points' => $assignment['total_points'] ?? 0,
+                            'attachment_path' => $assignment['attachment_path'] ?? null,
+                            'created_at' => $assignment['created_at'] ?? '',
+                        ];
+                    
+                }
+                
+                // Sort by due date
+                usort($assignments, function($a, $b) {
+                    $dateA = $a['due_date'] ? strtotime($a['due_date']) : 0;
+                    $dateB = $b['due_date'] ? strtotime($b['due_date']) : 0;
+                    return $dateB - $dateA;
+                });
+            }
+            return view('ManageAssignment.StudentListAssignment', compact('assignments'));
+            
+        } catch (\Exception $e) {
+            return view('ManageAssignment.StudentListAssignment')
+                ->with('error', 'Failed to fetch assignments: ' . $e->getMessage());
+        } 
+    }
+
+    public function addSubmission(Request $request, $id)
+    {
+        $studentId = $this->getFirebaseUserId();
+
+        if (!$studentId) {
+            return redirect()->route('ManageAssignment.StudentListAssignment')
+                ->with('error', 'Authentication failed. Please log in.');
+        }
+
+        // Validate inputs - at least one of file or link must be provided
+        $request->validate([
+            'submission_file' => 'nullable|file|mimes:pdf,doc,docx,zip|max:10240', // Changed from 'attachment'
+            'submission_link' => 'nullable|url|max:500',
+        ]);
+
+        // Ensure at least one submission method is provided
+        if (!$request->hasFile('submission_file') && !$request->filled('submission_link')) {
+            return redirect()->back()
+                ->with('error', 'Please provide either a file or a link for your submission.');
+        }
+
+        $filePath = null;
+        if ($request->hasFile('submission_file')) {
+            $file = $request->file('submission_file');
+            
+            // Generate unique filename
+            $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            
+            // Store file in storage/app/public/assignments directory
+            $filePath = $file->storeAs('assignment_submission', $fileName, 'public');
+        }
+
+        // Prepare submission data
+        $submissionData = [
+            'assignment_id' => $id,
+            'student_id' => $studentId,
+            'attachment_path' => $filePath,
+            'submission_link' => $request->input('submission_link'),
+            'submitted_at' => now()->toDateTimeString(),
+            'status' => 'submitted',
+        ];
+
+        try {
+            $this->database->getReference('assignments_submission')->push($submissionData);
+
+            return redirect()->route('assignments.viewStudentAssignment')->with('success', 'Assignment added successfully!');
+        } catch (\Exception $e) {
+            // Return to the previous form with the error message
+            return redirect()->back()->withInput()->with('error', 'Failed to save assignment to database: ' . $e->getMessage());
+        }
+    }
+
 }
