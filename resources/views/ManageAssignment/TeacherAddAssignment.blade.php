@@ -81,6 +81,28 @@
                         @enderror
                     </div>
 
+                    <!-- Class Section Selection -->
+                    <div>
+                        <label for="class_section" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Class Section <span class="text-red-500">*</span>
+                        </label>
+                        <select 
+                            id="class_section" 
+                            name="class_section" 
+                            required
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                        >
+                            <option value="">-- Select Class Section --</option>
+                            <option value="1A" {{ old('class_section') == '1A' ? 'selected' : '' }}>1A</option>
+                            <option value="1B" {{ old('class_section') == '1B' ? 'selected' : '' }}>1B</option>
+                            <option value="2A" {{ old('class_section') == '2A' ? 'selected' : '' }}>2A</option>
+                            <option value="2B" {{ old('class_section') == '2B' ? 'selected' : '' }}>2B</option>
+                        </select>
+                        @error('class_section')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <!-- Description -->
                     <div>
                         <label for="description" class="block text-sm font-semibold text-gray-700 mb-2">

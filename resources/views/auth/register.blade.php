@@ -37,7 +37,7 @@
 
         h2 {
             text-align: center;
-            color: #1976d2; /* MyCampus Blue */
+            color: #1976d2;
             margin-bottom: 25px;
             font-weight: 700;
         }
@@ -93,6 +93,11 @@
             font-size: 14px;
             margin-top: 10px;
         }
+
+        /* Hide class section field by default */
+        #classSection {
+            display: none;
+        }
     </style>
 </head>
 
@@ -140,6 +145,18 @@
                 <option value="administrator">Administrator</option>
             </select>
 
+            <!-- Class Section Field (Hidden by default) -->
+            <div id="classSection">
+                <label for="class_section">Class Section</label>
+                <select name="class_section" id="class_section">
+                    <option value="">-- Choose Class Section --</option>
+                    <option value="1A">1A</option>
+                    <option value="1B">1B</option>
+                    <option value="2A">2A</option>
+                    <option value="2B">2B</option>
+                </select>
+            </div>
+
             <button type="submit" class="btn-submit">Register</button>
         </form>
 
@@ -150,6 +167,23 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Show/hide class section based on role selection
+    document.getElementById('role').addEventListener('change', function() {
+        const classSectionDiv = document.getElementById('classSection');
+        const classSectionSelect = document.getElementById('class_section');
+        
+        if (this.value === 'student') {
+            classSectionDiv.style.display = 'block';
+            classSectionSelect.setAttribute('required', 'required');
+        } else {
+            classSectionDiv.style.display = 'none';
+            classSectionSelect.removeAttribute('required');
+            classSectionSelect.value = ''; // Clear selection
+        }
+    });
+</script>
 
 </body>
 </html>

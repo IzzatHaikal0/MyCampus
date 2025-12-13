@@ -82,6 +82,37 @@
                         @enderror
                     </div>
 
+                    <!-- Class Section Selection -->
+                    <div>
+                        <label for="class_section" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Class Section <span class="text-red-500">*</span>
+                        </label>
+                        <select 
+                            id="class_section" 
+                            name="class_section" 
+                            required
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                        >
+                            <option value="">-- Select Class Section --</option>
+                            @php
+                                $currentSection = old('class_section', $assignment['class_section'] ?? '');
+                            @endphp
+                            <option value="1A" {{ $currentSection == '1A' ? 'selected' : '' }}>1A</option>
+                            <option value="1B" {{ $currentSection == '1B' ? 'selected' : '' }}>1B</option>
+                            <option value="2A" {{ $currentSection == '2A' ? 'selected' : '' }}>2A</option>
+                            <option value="2B" {{ $currentSection == '2B' ? 'selected' : '' }}>2B</option>
+                        </select>
+                        @error('class_section')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                        
+                        @if(isset($assignment['class_section']))
+                            <p class="mt-2 text-sm text-gray-600">
+                                <i class="fas fa-info-circle"></i> Currently assigned to: <span class="font-semibold text-purple-600">{{ $assignment['class_section'] }}</span>
+                            </p>
+                        @endif
+                    </div>
+
                     <!-- Description -->
                     <div>
                         <label for="description" class="block text-sm font-semibold text-gray-700 mb-2">
