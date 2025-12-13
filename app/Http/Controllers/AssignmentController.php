@@ -86,15 +86,17 @@ class AssignmentController extends Controller
     public function store(Request $request)
     {
         $teacherId = $this->getFirebaseUserId(); 
-    
+
         if (!$teacherId) {
             // Now it properly checks the custom session status
             return view('ManageAssignment.TeacherListAssignment')
                 ->with('error', 'Authentication failed. Please log in.');
         }
+        
         // Validate inputs
         $request->validate([
             'assignment_name' => 'required|string',
+            'class_section' => 'required|string', // Added class_section validation
             'description' => 'required|string',
             'due_date' => 'required|date',
             'due_time' => 'required|date_format:H:i',
@@ -121,6 +123,7 @@ class AssignmentController extends Controller
         // Prepare assignment data
         $assignmentData = [
             'assignment_name' => $request->assignment_name,
+            'class_section' => $request->class_section, // Store class section
             'description' => $request->description,
             'due_date' => $request->due_date,
             'due_time' => $request->due_time,
@@ -133,10 +136,12 @@ class AssignmentController extends Controller
         try {
             $this->database->getReference('assignments')->push($assignmentData);
 
-            return redirect()->route('assignments.list')->with('success', 'Assignment added successfully!');
+            return redirect()->route('assignments.list')
+                ->with('success', 'Assignment added successfully for class ' . $request->class_section . '!');
         } catch (\Exception $e) {
             // Return to the previous form with the error message
-            return redirect()->back()->withInput()->with('error', 'Failed to save assignment to database: ' . $e->getMessage());
+            return redirect()->back()->withInput()
+                ->with('error', 'Failed to save assignment to database: ' . $e->getMessage());
         }
     }
 
@@ -241,6 +246,7 @@ class AssignmentController extends Controller
             // Validate inputs
             $request->validate([
                 'assignment_name' => 'required|string|max:255',
+                'class_section' => 'required|string', // Added class_section validation
                 'description' => 'required|string',
                 'due_date' => 'required|date',
                 'due_time' => 'required|date_format:H:i',
@@ -266,6 +272,7 @@ class AssignmentController extends Controller
             // Prepare updated assignment data
             $assignmentData = [
                 'assignment_name' => $request->assignment_name,
+                'class_section' => $request->class_section, // Store class section
                 'description' => $request->description,
                 'due_date' => $request->due_date,
                 'due_time' => $request->due_time,
@@ -309,7 +316,7 @@ class AssignmentController extends Controller
             $this->database->getReference('assignments/' . $id)->set($assignmentData);
 
             return redirect()->route('assignments.list')
-                ->with('success', 'Assignment updated successfully!');
+                ->with('success', 'Assignment updated successfully for class ' . $request->class_section . '!');
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()
@@ -331,16 +338,63 @@ class AssignmentController extends Controller
         return Session::get('firebase_user.uid');
     }
 
-    public function viewStudentAssignment(Request $request)
+   public function viewStudentAssignment(Request $request)
     {
-        try{
-            $allAssignments = $this->database->getReference('assignments')->getValue();
-            $assignments = [];
+        $studentId = $this->getFirebaseUserId();
 
+        if (!$studentId) {
+            return redirect()->route('login')
+                ->with('error', 'Please log in to view assignments.');
+        }
+
+        try {
+            // Get student's data to find their class section
+            $studentData = $this->database->getReference('users/' . $studentId)->getValue();
+            $studentClassSection = $studentData['class_section'] ?? null;
+
+            if (!$studentClassSection) {
+                return view('ManageAssignment.StudentListAssignment', ['assignments' => []])
+                    ->with('error', 'You are not assigned to any class section.');
+            }
+
+            // Get all assignments from Firebase
+            $allAssignments = $this->database->getReference('assignments')->getValue();
+
+            // Get all submissions by this student
+            $allSubmissions = $this->database->getReference('assignments_submission')->getValue();
+            
+            // Create a map of assignment_id => submission data for this student
+            $studentSubmissions = [];
+            if ($allSubmissions) {
+                foreach ($allSubmissions as $submissionId => $submission) {
+                    if (isset($submission['student_id']) && $submission['student_id'] === $studentId) {
+                        $assignmentId = $submission['assignment_id'] ?? null;
+                        if ($assignmentId) {
+                            $studentSubmissions[$assignmentId] = [
+                                'submission_id' => $submissionId,
+                                'submitted_at' => $submission['submitted_at'] ?? '',
+                                'status' => $submission['status'] ?? 'submitted',
+                                'attachment_path' => $submission['attachment_path'] ?? null,
+                                'submission_link' => $submission['submission_link'] ?? null,
+                            ];
+                        }
+                    }
+                }
+            }
+
+            $assignments = [];
+            
             if ($allAssignments) {
-                foreach ($allAssignments as $key => $assignment) {
+                foreach ($allAssignments as $id => $assignment) {
+                    // Filter: Only include assignments matching student's class section
+                    if (isset($assignment['class_section']) && $assignment['class_section'] === $studentClassSection) {
+                        
+                        // Check if student has submitted this assignment
+                        $hasSubmitted = isset($studentSubmissions[$id]);
+                        $submissionData = $hasSubmitted ? $studentSubmissions[$id] : null;
+                        
                         $assignments[] = [
-                            'id' => $key,
+                            'id' => $id,
                             'assignment_name' => $assignment['assignment_name'] ?? '',
                             'description' => $assignment['description'] ?? '',
                             'due_date' => $assignment['due_date'] ?? '',
@@ -348,23 +402,28 @@ class AssignmentController extends Controller
                             'total_points' => $assignment['total_points'] ?? 0,
                             'attachment_path' => $assignment['attachment_path'] ?? null,
                             'created_at' => $assignment['created_at'] ?? '',
+                            'class_section' => $assignment['class_section'] ?? '',
+                            // Submission status
+                            'has_submitted' => $hasSubmitted,
+                            'submission' => $submissionData,
                         ];
-                    
+                    }
                 }
                 
-                // Sort by due date
+                // Sort by due date (newest first)
                 usort($assignments, function($a, $b) {
                     $dateA = $a['due_date'] ? strtotime($a['due_date']) : 0;
                     $dateB = $b['due_date'] ? strtotime($b['due_date']) : 0;
                     return $dateB - $dateA;
                 });
             }
+
             return view('ManageAssignment.StudentListAssignment', compact('assignments'));
             
         } catch (\Exception $e) {
-            return view('ManageAssignment.StudentListAssignment')
+            return view('ManageAssignment.StudentListAssignment', ['assignments' => []])
                 ->with('error', 'Failed to fetch assignments: ' . $e->getMessage());
-        } 
+        }
     }
 
     public function addSubmission(Request $request, $id)
@@ -378,7 +437,7 @@ class AssignmentController extends Controller
 
         // Validate inputs - at least one of file or link must be provided
         $request->validate([
-            'submission_file' => 'nullable|file|mimes:pdf,doc,docx,zip|max:10240', // Changed from 'attachment'
+            'submission_file' => 'nullable|file|mimes:pdf,doc,docx,zip|max:10240',
             'submission_link' => 'nullable|url|max:500',
         ]);
 
@@ -388,34 +447,61 @@ class AssignmentController extends Controller
                 ->with('error', 'Please provide either a file or a link for your submission.');
         }
 
-        $filePath = null;
-        if ($request->hasFile('submission_file')) {
-            $file = $request->file('submission_file');
-            
-            // Generate unique filename
-            $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-            
-            // Store file in storage/app/public/assignments directory
-            $filePath = $file->storeAs('assignment_submission', $fileName, 'public');
-        }
-
-        // Prepare submission data
-        $submissionData = [
-            'assignment_id' => $id,
-            'student_id' => $studentId,
-            'attachment_path' => $filePath,
-            'submission_link' => $request->input('submission_link'),
-            'submitted_at' => now()->toDateTimeString(),
-            'status' => 'submitted',
-        ];
-
         try {
+            // Get student's class section
+            $studentData = $this->database->getReference('users/' . $studentId)->getValue();
+            $studentClassSection = $studentData['class_section'] ?? null;
+
+            if (!$studentClassSection) {
+                return redirect()->back()
+                    ->with('error', 'You are not assigned to any class section.');
+            }
+
+            // Get assignment data to verify it matches student's class section
+            $assignmentData = $this->database->getReference('assignments/' . $id)->getValue();
+            
+            if (!$assignmentData) {
+                return redirect()->back()
+                    ->with('error', 'Assignment not found.');
+            }
+
+            // Verify student is submitting to the correct class assignment
+            if (isset($assignmentData['class_section']) && $assignmentData['class_section'] !== $studentClassSection) {
+                return redirect()->back()
+                    ->with('error', 'You cannot submit to an assignment from a different class section.');
+            }
+
+            $filePath = null;
+            if ($request->hasFile('submission_file')) {
+                $file = $request->file('submission_file');
+                
+                // Generate unique filename
+                $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                
+                // Store file in storage/app/public/assignments directory
+                $filePath = $file->storeAs('assignment_submission', $fileName, 'public');
+            }
+
+            // Prepare submission data
+            $submissionData = [
+                'assignment_id' => $id,
+                'student_id' => $studentId,
+                'class_section' => $studentClassSection, // Add student's class section
+                'attachment_path' => $filePath,
+                'submission_link' => $request->input('submission_link'),
+                'submitted_at' => now()->toDateTimeString(),
+                'status' => 'submitted',
+            ];
+
             $this->database->getReference('assignments_submission')->push($submissionData);
 
-            return redirect()->route('assignments.viewStudentAssignment')->with('success', 'Assignment added successfully!');
+            return redirect()->route('assignments.viewStudentAssignment')
+                ->with('success', 'Assignment submitted successfully for class ' . $studentClassSection . '!');
+                
         } catch (\Exception $e) {
             // Return to the previous form with the error message
-            return redirect()->back()->withInput()->with('error', 'Failed to save assignment to database: ' . $e->getMessage());
+            return redirect()->back()->withInput()
+                ->with('error', 'Failed to save assignment to database: ' . $e->getMessage());
         }
     }
 
