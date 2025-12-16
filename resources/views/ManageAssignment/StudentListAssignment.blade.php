@@ -134,8 +134,8 @@
                                         @endif
                                     </div>
                                     <div class="flex flex-col gap-2 ml-4">
-                                        @if($assignment['attachment_path'])
-                                            <a href="{{ asset('storage/' . $assignment['attachment_path']) }}" 
+                                        @if($assignment['has_submitted'] && isset($assignment['submission']['attachment_path']) && $assignment['submission']['attachment_path'])
+                                            <a href="{{ asset('storage/' . $assignment['submission']['attachment_path']) }}" 
                                             target="_blank" 
                                             class="px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium flex items-center gap-2 justify-center">
                                                 <i class="fas fa-file-download"></i>
@@ -352,237 +352,274 @@
     </div>
 
     <script>
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('mainContent');
-            const sidebarTexts = document.querySelectorAll('.sidebar-text');
-            
-            if (sidebar.classList.contains('w-72')) {
-                sidebar.classList.remove('w-72');
-                sidebar.classList.add('w-20');
-                mainContent.classList.remove('ml-72');
-                mainContent.classList.add('ml-20');
-                sidebarTexts.forEach(text => text.classList.add('hidden'));
-            } else {
-                sidebar.classList.remove('w-20');
-                sidebar.classList.add('w-72');
-                mainContent.classList.remove('ml-20');
-                mainContent.classList.add('ml-72');
-                sidebarTexts.forEach(text => text.classList.remove('hidden'));
-            }
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        const sidebarTexts = document.querySelectorAll('.sidebar-text');
+        
+        if (sidebar.classList.contains('w-72')) {
+            sidebar.classList.remove('w-72');
+            sidebar.classList.add('w-20');
+            mainContent.classList.remove('ml-72');
+            mainContent.classList.add('ml-20');
+            sidebarTexts.forEach(text => text.classList.add('hidden'));
+        } else {
+            sidebar.classList.remove('w-20');
+            sidebar.classList.add('w-72');
+            mainContent.classList.remove('ml-20');
+            mainContent.classList.add('ml-72');
+            sidebarTexts.forEach(text => text.classList.remove('hidden'));
         }
+    }
 
-        function openSubmissionModal(assignment) {
-            const modal = document.getElementById('submissionModal');
-            const form = document.getElementById('submissionForm');
-            const assignmentInfo = document.getElementById('modalAssignmentInfo');
-            const assignmentIdInput = document.getElementById('assignmentIdInput');
-            
-            form.action = `/assignments/add-submission/${assignment.id}`;
-            
-            if (assignmentIdInput) {
-                assignmentIdInput.value = assignment.id;
-            }
-            
-            assignmentInfo.innerHTML = `
-                <div class="flex items-start gap-2">
-                    <i class="fas fa-book text-purple-600 mt-1"></i>
-                    <div>
-                        <span class="font-semibold">Assignment:</span> ${assignment.assignment_name || 'N/A'}
-                    </div>
+    // Auto-hide flash messages after 5 seconds
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.flash-message').forEach(message => {
+            setTimeout(() => {
+                message.style.opacity = '0';
+                setTimeout(() => message.remove(), 500);
+            }, 5000);
+        });
+    });
+
+    function openSubmissionModal(assignment) {
+        const modal = document.getElementById('submissionModal');
+        const form = document.getElementById('submissionForm');
+        const assignmentInfo = document.getElementById('modalAssignmentInfo');
+        const assignmentIdInput = document.getElementById('assignmentIdInput');
+        
+        form.action = `/assignments/add-submission/${assignment.id}`;
+        
+        if (assignmentIdInput) {
+            assignmentIdInput.value = assignment.id;
+        }
+        
+        assignmentInfo.innerHTML = `
+            <div class="flex items-start gap-2">
+                <i class="fas fa-book text-purple-600 mt-1"></i>
+                <div>
+                    <span class="font-semibold">Assignment:</span> ${assignment.assignment_name || 'N/A'}
                 </div>
-                <div class="flex items-start gap-2">
-                    <i class="fas fa-align-left text-purple-600 mt-1"></i>
-                    <div>
-                        <span class="font-semibold">Description:</span> ${assignment.description || 'N/A'}
-                    </div>
+            </div>
+            <div class="flex items-start gap-2">
+                <i class="fas fa-align-left text-purple-600 mt-1"></i>
+                <div>
+                    <span class="font-semibold">Description:</span> ${assignment.description || 'N/A'}
                 </div>
-                <div class="flex items-center gap-4 flex-wrap">
-                    <span class="flex items-center gap-2">
-                        <i class="fas fa-calendar text-purple-600"></i>
-                        <span class="font-semibold">Due:</span> ${assignment.due_date ? new Date(assignment.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
-                    </span>
-                    <span class="flex items-center gap-2">
-                        <i class="fas fa-clock text-purple-600"></i>
-                        ${assignment.due_time || 'N/A'}
-                    </span>
-                    <span class="flex items-center gap-2">
-                        <i class="fas fa-star text-purple-600"></i>
-                        ${assignment.total_points || '0'} Points
-                    </span>
+            </div>
+            <div class="flex items-center gap-4 flex-wrap">
+                <span class="flex items-center gap-2">
+                    <i class="fas fa-calendar text-purple-600"></i>
+                    <span class="font-semibold">Due:</span> ${assignment.due_date ? new Date(assignment.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                </span>
+                <span class="flex items-center gap-2">
+                    <i class="fas fa-clock text-purple-600"></i>
+                    ${assignment.due_time || 'N/A'}
+                </span>
+                <span class="flex items-center gap-2">
+                    <i class="fas fa-star text-purple-600"></i>
+                    ${assignment.total_points || '0'} Points
+                </span>
+            </div>
+        `;
+        
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeSubmissionModal() {
+        const modal = document.getElementById('submissionModal');
+        const form = document.getElementById('submissionForm');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const linkInput = document.getElementById('submissionLink');
+        
+        modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        
+        form.reset();
+        fileName.classList.add('hidden');
+        fileName.textContent = '';
+    }
+
+    function openEditSubmissionModal(assignment) {
+        const modal = document.getElementById('editSubmissionModal');
+        const form = document.getElementById('editSubmissionForm');
+        const assignmentInfo = document.getElementById('editModalAssignmentInfo');
+        const currentSubmissionInfo = document.getElementById('currentSubmissionInfo');
+        const assignmentIdInput = document.getElementById('editAssignmentIdInput');
+        const linkInput = document.getElementById('editSubmissionLink');
+        
+        form.action = `/assignments/edit-submission/${assignment.id}`;
+        
+        if (assignmentIdInput) {
+            assignmentIdInput.value = assignment.id;
+        }
+        
+        assignmentInfo.innerHTML = `
+            <div class="flex items-start gap-2">
+                <i class="fas fa-book text-orange-600 mt-1"></i>
+                <div>
+                    <span class="font-semibold">Assignment:</span> ${assignment.assignment_name || 'N/A'}
                 </div>
-            `;
-            
-            modal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-        }
+            </div>
+            <div class="flex items-center gap-4 flex-wrap">
+                <span class="flex items-center gap-2">
+                    <i class="fas fa-calendar text-orange-600"></i>
+                    <span class="font-semibold">Due:</span> ${assignment.due_date ? new Date(assignment.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                </span>
+                <span class="flex items-center gap-2">
+                    <i class="fas fa-star text-orange-600"></i>
+                    ${assignment.total_points || '0'} Points
+                </span>
+            </div>
+        `;
 
-        function closeSubmissionModal() {
-            const modal = document.getElementById('submissionModal');
-            const form = document.getElementById('submissionForm');
-            const fileInput = document.getElementById('fileInput');
-            const fileName = document.getElementById('fileName');
-            const linkInput = document.getElementById('submissionLink');
-            
-            modal.classList.add('hidden');
-            document.body.style.overflow = 'auto';
-            
-            form.reset();
-            fileName.classList.add('hidden');
-            fileName.textContent = '';
-        }
+        // Reset the link input first
+        linkInput.value = '';
 
-        function openEditSubmissionModal(assignment) {
-            const modal = document.getElementById('editSubmissionModal');
-            const form = document.getElementById('editSubmissionForm');
-            const assignmentInfo = document.getElementById('editModalAssignmentInfo');
-            const currentSubmissionInfo = document.getElementById('currentSubmissionInfo');
-            const assignmentIdInput = document.getElementById('editAssignmentIdInput');
-            const linkInput = document.getElementById('editSubmissionLink');
+        // Show current submission details
+        if (assignment.submission) {
+            let submissionHTML = '<h4 class="font-semibold text-gray-800 text-base mb-2"><i class="fas fa-info-circle text-blue-600"></i> Current Submission</h4>';
             
-            form.action = `/assignments/add-submission/${assignment.id}`;
-            
-            if (assignmentIdInput) {
-                assignmentIdInput.value = assignment.id;
+            if (assignment.submission.submitted_at) {
+                submissionHTML += `<p class="text-sm text-gray-600 mb-1">Submitted: ${new Date(assignment.submission.submitted_at).toLocaleString()}</p>`;
             }
             
-            assignmentInfo.innerHTML = `
-                <div class="flex items-start gap-2">
-                    <i class="fas fa-book text-orange-600 mt-1"></i>
-                    <div>
-                        <span class="font-semibold">Assignment:</span> ${assignment.assignment_name || 'N/A'}
-                    </div>
-                </div>
-                <div class="flex items-center gap-4 flex-wrap">
-                    <span class="flex items-center gap-2">
-                        <i class="fas fa-calendar text-orange-600"></i>
-                        <span class="font-semibold">Due:</span> ${assignment.due_date ? new Date(assignment.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
-                    </span>
-                    <span class="flex items-center gap-2">
-                        <i class="fas fa-star text-orange-600"></i>
-                        ${assignment.total_points || '0'} Points
-                    </span>
-                </div>
-            `;
-
-            // Show current submission details
-            if (assignment.submission) {
-                let submissionHTML = '<h4 class="font-semibold text-gray-800 text-base mb-2"><i class="fas fa-info-circle text-blue-600"></i> Current Submission</h4>';
-                
-                if (assignment.submission.submitted_at) {
-                    submissionHTML += `<p class="text-sm text-gray-600 mb-1">Submitted: ${new Date(assignment.submission.submitted_at).toLocaleString()}</p>`;
-                }
-                
-                if (assignment.submission.attachment_path) {
-                    submissionHTML += `<p class="text-sm text-gray-600 mb-1"><i class="fas fa-file text-blue-600"></i> File: ${assignment.submission.attachment_path.split('/').pop()}</p>`;
-                }
-                
-                if (assignment.submission.submission_link) {
-                    submissionHTML += `<p class="text-sm text-gray-600"><i class="fas fa-link text-blue-600"></i> Link: <a href="${assignment.submission.submission_link}" target="_blank" class="text-blue-600 hover:underline">${assignment.submission.submission_link}</a></p>`;
-                    linkInput.value = assignment.submission.submission_link;
-                }
-                
-                currentSubmissionInfo.innerHTML = submissionHTML;
+            if (assignment.submission.attachment_path) {
+                submissionHTML += `<p class="text-sm text-gray-600 mb-1"><i class="fas fa-file text-blue-600"></i> File: ${assignment.submission.attachment_path.split('/').pop()}</p>`;
             }
             
-            modal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeEditSubmissionModal() {
-            const modal = document.getElementById('editSubmissionModal');
-            const form = document.getElementById('editSubmissionForm');
-            const fileInput = document.getElementById('editFileInput');
-            const fileName = document.getElementById('editFileName');
-            const linkInput = document.getElementById('editSubmissionLink');
-            
-            modal.classList.add('hidden');
-            document.body.style.overflow = 'auto';
-            
-            form.reset();
-            fileName.classList.add('hidden');
-            fileName.textContent = '';
-        }
-
-        function updateFileName(input) {
-            const fileName = document.getElementById('fileName');
-            if (input.files && input.files[0]) {
-                const file = input.files[0];
-                const fileSize = (file.size / 1024 / 1024).toFixed(2);
-                
-                if (file.size > 10 * 1024 * 1024) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'File Too Large',
-                        text: 'File size must not exceed 10MB',
-                        confirmButtonColor: '#9333ea'
-                    });
-                    input.value = '';
-                    fileName.classList.add('hidden');
-                    return;
-                }
-                
-                fileName.textContent = `Selected: ${file.name} (${fileSize} MB)`;
-                fileName.classList.remove('hidden');
-            } else {
-                fileName.classList.add('hidden');
-                fileName.textContent = '';
+            if (assignment.submission.submission_link) {
+                submissionHTML += `<p class="text-sm text-gray-600"><i class="fas fa-link text-blue-600"></i> Link: <a href="${assignment.submission.submission_link}" target="_blank" class="text-blue-600 hover:underline">${assignment.submission.submission_link}</a></p>`;
+                // Pre-fill the link input with current link
+                linkInput.value = assignment.submission.submission_link;
             }
-        }
-
-        function updateEditFileName(input) {
-            const fileName = document.getElementById('editFileName');
-            if (input.files && input.files[0]) {
-                const file = input.files[0];
-                const fileSize = (file.size / 1024 / 1024).toFixed(2);
-                
-                if (file.size > 10 * 1024 * 1024) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'File Too Large',
-                        text: 'File size must not exceed 10MB',
-                        confirmButtonColor: '#ea580c'
-                    });
-                    input.value = '';
-                    fileName.classList.add('hidden');
-                    return;
-                }
-                
-                fileName.textContent = `New file: ${file.name} (${fileSize} MB)`;
-                fileName.classList.remove('hidden');
-            } else {
-                fileName.classList.add('hidden');
-                fileName.textContent = '';
-            }
-        }
-
-        function handleSubmission(event) {
-            event.preventDefault();
             
-            const fileInput = document.getElementById('fileInput');
-            const linkInput = document.getElementById('submissionLink');
-            const form = document.getElementById('submissionForm');
+            currentSubmissionInfo.innerHTML = submissionHTML;
+        }
+        
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeEditSubmissionModal() {
+        const modal = document.getElementById('editSubmissionModal');
+        const form = document.getElementById('editSubmissionForm');
+        const fileInput = document.getElementById('editFileInput');
+        const fileName = document.getElementById('editFileName');
+        const linkInput = document.getElementById('editSubmissionLink');
+        
+        modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        
+        form.reset();
+        fileName.classList.add('hidden');
+        fileName.textContent = '';
+    }
+
+    function updateFileName(input) {
+        const fileName = document.getElementById('fileName');
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const fileSize = (file.size / 1024 / 1024).toFixed(2);
             
-            if (!fileInput.files.length && !linkInput.value.trim()) {
+            if (file.size > 10 * 1024 * 1024) {
                 Swal.fire({
-                    icon: 'warning',
-                    title: 'Submission Required',
-                    text: 'Please provide either a file or a link for your submission.',
+                    icon: 'error',
+                    title: 'File Too Large',
+                    text: 'File size must not exceed 10MB',
                     confirmButtonColor: '#9333ea'
                 });
-                return false;
+                input.value = '';
+                fileName.classList.add('hidden');
+                return;
             }
+            
+            fileName.textContent = `Selected: ${file.name} (${fileSize} MB)`;
+            fileName.classList.remove('hidden');
+        } else {
+            fileName.classList.add('hidden');
+            fileName.textContent = '';
+        }
+    }
 
+    function updateEditFileName(input) {
+        const fileName = document.getElementById('editFileName');
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const fileSize = (file.size / 1024 / 1024).toFixed(2);
+            
+            if (file.size > 10 * 1024 * 1024) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'File Too Large',
+                    text: 'File size must not exceed 10MB',
+                    confirmButtonColor: '#ea580c'
+                });
+                input.value = '';
+                fileName.classList.add('hidden');
+                return;
+            }
+            
+            fileName.textContent = `New file: ${file.name} (${fileSize} MB)`;
+            fileName.classList.remove('hidden');
+        } else {
+            fileName.classList.add('hidden');
+            fileName.textContent = '';
+        }
+    }
+
+    function handleSubmission(event) {
+        event.preventDefault();
+        
+        const fileInput = document.getElementById('fileInput');
+        const linkInput = document.getElementById('submissionLink');
+        const form = document.getElementById('submissionForm');
+        
+        if (!fileInput.files.length && !linkInput.value.trim()) {
             Swal.fire({
-                icon: 'success',
-                title: 'Submitting...',
-                text: 'Your assignment is being submitted',
-                showConfirmButton: false,
-                timer: 1500
-            }).then(() => {
-                form.submit();
+                icon: 'warning',
+                title: 'Submission Required',
+                text: 'Please provide either a file or a link for your submission.',
+                confirmButtonColor: '#9333ea'
             });
-
             return false;
         }
-    </script>
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Submitting...',
+            text: 'Your assignment is being submitted',
+            showConfirmButton: false,
+            timer: 1500
+        }).then(() => {
+            form.submit();
+        });
+
+        return false;
+    }
+
+    function handleEditSubmission(event) {
+        event.preventDefault();
+        
+        const fileInput = document.getElementById('editFileInput');
+        const linkInput = document.getElementById('editSubmissionLink');
+        const form = document.getElementById('editSubmissionForm');
+        
+        // For edit, we allow updating without requiring new input
+        // User can update file only, link only, both, or keep existing
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Updating...',
+            text: 'Your submission is being updated',
+            showConfirmButton: false,
+            timer: 1500
+        }).then(() => {
+            form.submit();
+        });
+
+        return false;
+    }
+</script>

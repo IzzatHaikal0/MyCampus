@@ -360,7 +360,7 @@ class AssignmentController extends Controller
             // Get all assignments from Firebase
             $allAssignments = $this->database->getReference('assignments')->getValue();
 
-            // Get all submissions by this student
+            // Get all submissions by this student - FORCE FRESH DATA
             $allSubmissions = $this->database->getReference('assignments_submission')->getValue();
             
             // Create a map of assignment_id => submission data for this student
@@ -370,6 +370,7 @@ class AssignmentController extends Controller
                     if (isset($submission['student_id']) && $submission['student_id'] === $studentId) {
                         $assignmentId = $submission['assignment_id'] ?? null;
                         if ($assignmentId) {
+                            // Store the LATEST submission data
                             $studentSubmissions[$assignmentId] = [
                                 'submission_id' => $submissionId,
                                 'submitted_at' => $submission['submitted_at'] ?? '',
@@ -418,7 +419,12 @@ class AssignmentController extends Controller
                 });
             }
 
-            return view('ManageAssignment.StudentListAssignment', compact('assignments'));
+            // Disable caching for this view
+            return response()
+                ->view('ManageAssignment.StudentListAssignment', compact('assignments'))
+                ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                ->header('Pragma', 'no-cache')
+                ->header('Expires', '0');
             
         } catch (\Exception $e) {
             return view('ManageAssignment.StudentListAssignment', ['assignments' => []])
@@ -502,6 +508,228 @@ class AssignmentController extends Controller
             // Return to the previous form with the error message
             return redirect()->back()->withInput()
                 ->with('error', 'Failed to save assignment to database: ' . $e->getMessage());
+        }
+    }
+
+
+    public function editSubmission(Request $request, $id)
+    {
+        $studentId = $this->getFirebaseUserId();
+
+        if (!$studentId) {
+            return redirect()->route('assignments.viewStudentAssignment')
+                ->with('error', 'Authentication failed. Please log in.');
+        }
+
+        // Validate inputs - both can be optional for editing
+        $request->validate([
+            'submission_file' => 'nullable|file|mimes:pdf,doc,docx,zip|max:10240',
+            'submission_link' => 'nullable|url|max:500',
+        ]);
+
+        try {
+            // Get student's class section
+            $studentData = $this->database->getReference('users/' . $studentId)->getValue();
+            $studentClassSection = $studentData['class_section'] ?? null;
+
+            if (!$studentClassSection) {
+                return redirect()->back()
+                    ->with('error', 'You are not assigned to any class section.');
+            }
+
+            // Get assignment data to verify it matches student's class section
+            $assignmentData = $this->database->getReference('assignments/' . $id)->getValue();
+            
+            if (!$assignmentData) {
+                return redirect()->back()
+                    ->with('error', 'Assignment not found.');
+            }
+
+            // Verify student is submitting to the correct class assignment
+            if (isset($assignmentData['class_section']) && $assignmentData['class_section'] !== $studentClassSection) {
+                return redirect()->back()
+                    ->with('error', 'You cannot edit submission for an assignment from a different class section.');
+            }
+
+            // Find existing submission by this student for this assignment
+            $allSubmissions = $this->database->getReference('assignments_submission')->getValue();
+            $existingSubmissionId = null;
+            $existingSubmission = null;
+
+            if ($allSubmissions) {
+                foreach ($allSubmissions as $submissionId => $submission) {
+                    if (isset($submission['assignment_id']) && $submission['assignment_id'] === $id &&
+                        isset($submission['student_id']) && $submission['student_id'] === $studentId) {
+                        $existingSubmissionId = $submissionId;
+                        $existingSubmission = $submission;
+                        break;
+                    }
+                }
+            }
+
+            // If no existing submission found, redirect back
+            if (!$existingSubmissionId) {
+                return redirect()->back()
+                    ->with('error', 'No existing submission found to edit.');
+            }
+
+            // Prepare updated submission data - start with existing data
+            $submissionData = $existingSubmission;
+
+            // Handle file upload
+            if ($request->hasFile('submission_file')) {
+                // Delete old file if it exists
+                if (isset($existingSubmission['attachment_path']) && $existingSubmission['attachment_path']) {
+                    $oldFilePath = storage_path('app/public/' . $existingSubmission['attachment_path']);
+                    if (file_exists($oldFilePath)) {
+                        unlink($oldFilePath);
+                    }
+                }
+
+                // Upload new file
+                $file = $request->file('submission_file');
+                $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $filePath = $file->storeAs('assignment_submission', $fileName, 'public');
+                
+                $submissionData['attachment_path'] = $filePath;
+            }
+
+            // Update link if provided
+            if ($request->filled('submission_link')) {
+                $submissionData['submission_link'] = $request->input('submission_link');
+            }
+
+            // Update submission timestamp
+            $submissionData['submitted_at'] = now()->toDateTimeString();
+            $submissionData['status'] = 'submitted';
+
+            // Preserve original data
+            $submissionData['assignment_id'] = $id;
+            $submissionData['student_id'] = $studentId;
+            $submissionData['class_section'] = $studentClassSection;
+
+            // Update submission in Firebase
+            $this->database->getReference('assignments_submission/' . $existingSubmissionId)->set($submissionData);
+
+            return redirect()->route('assignments.viewStudentAssignment')
+                ->with('success', 'Assignment submission updated successfully for class ' . $studentClassSection . '!');
+                
+        } catch (\Exception $e) {
+            return redirect()->back()->withInput()
+                ->with('error', 'Failed to update submission: ' . $e->getMessage());
+        }
+    }
+
+
+
+   public function viewListSubmission(Request $request, $id)
+    {
+        $teacherId = $this->getFirebaseUserId();
+
+        if (!$teacherId) {
+            return redirect()->route('assignments.list')
+                ->with('error', 'Authentication failed. Please log in.');
+        }
+
+        try {
+            // Get assignment data
+            $assignmentData = $this->database->getReference('assignments/' . $id)->getValue();
+            
+            if (!$assignmentData) {
+                return redirect()->route('assignments.list')
+                    ->with('error', 'Assignment not found.');
+            }
+
+            // Verify the teacher owns this assignment
+            if (isset($assignmentData['teacherId']) && $assignmentData['teacherId'] !== $teacherId) {
+                return redirect()->route('assignments.list')
+                    ->with('error', 'Unauthorized: You can only view submissions for your own assignments!');
+            }
+
+            // Get all submissions for this assignment
+            $allSubmissions = $this->database->getReference('assignments_submission')->getValue();
+            
+            // Get all grades
+            $allGrades = $this->database->getReference('assignment_grade')->getValue();
+            
+            $ungradedSubmissions = [];
+            $gradedSubmissions = [];
+
+            if ($allSubmissions) {
+                foreach ($allSubmissions as $submissionId => $submission) {
+                    if (isset($submission['assignment_id']) && $submission['assignment_id'] === $id) {
+                        // Get student details
+                        $studentData = $this->database->getReference('users/' . $submission['student_id'])->getValue();
+                        
+                        // Check if this submission has been graded
+                        $gradeData = null;
+                        if ($allGrades) {
+                            foreach ($allGrades as $gradeId => $grade) {
+                                if (isset($grade['assignment_id']) && 
+                                    isset($grade['student_id']) &&
+                                    $grade['assignment_id'] === $id && 
+                                    $grade['student_id'] === $submission['student_id']) {
+                                    $gradeData = $grade;
+                                    $gradeData['grade_id'] = $gradeId;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        $submissionData = [
+                            'submission_id' => $submissionId,
+                            'student_id' => $submission['student_id'] ?? '',
+                            'student_name' => $studentData['name'] ?? 'Unknown Student',
+                            'student_email' => $studentData['email'] ?? 'N/A',
+                            'class_section' => $submission['class_section'] ?? 'N/A',
+                            'attachment_path' => $submission['attachment_path'] ?? null,
+                            'submission_link' => $submission['submission_link'] ?? null,
+                            'submitted_at' => $submission['submitted_at'] ?? 'N/A',
+                            'status' => $submission['status'] ?? 'submitted',
+                        ];
+                        
+                        // Add grade information if exists
+                        if ($gradeData) {
+                            $submissionData['grade'] = $gradeData['grade'] ?? 'N/A';
+                            $submissionData['feedback'] = $gradeData['feedback'] ?? '';
+                            $submissionData['grade_status'] = $gradeData['status'] ?? 'graded';
+                            $submissionData['graded_at'] = $gradeData['graded_at'] ?? 'N/A';
+                            $gradedSubmissions[] = $submissionData;
+                        } else {
+                            $ungradedSubmissions[] = $submissionData;
+                        }
+                    }
+                }
+            }
+
+            // Sort both arrays by submitted date (newest first)
+            usort($ungradedSubmissions, function($a, $b) {
+                $dateA = $a['submitted_at'] !== 'N/A' ? strtotime($a['submitted_at']) : 0;
+                $dateB = $b['submitted_at'] !== 'N/A' ? strtotime($b['submitted_at']) : 0;
+                return $dateB - $dateA;
+            });
+            
+            usort($gradedSubmissions, function($a, $b) {
+                $dateA = $a['graded_at'] !== 'N/A' ? strtotime($a['graded_at']) : 0;
+                $dateB = $b['graded_at'] !== 'N/A' ? strtotime($b['graded_at']) : 0;
+                return $dateB - $dateA;
+            });
+
+            // Add assignment ID to data
+            $assignment = array_merge(['id' => $id], $assignmentData);
+
+            return view('ManageAssignment.TeacherViewSubmission', [
+                'assignment' => $assignment,
+                'ungradedSubmissions' => $ungradedSubmissions,
+                'gradedSubmissions' => $gradedSubmissions,
+                'totalSubmissions' => count($ungradedSubmissions) + count($gradedSubmissions),
+                'totalGraded' => count($gradedSubmissions),
+                'totalUngraded' => count($ungradedSubmissions)
+            ]);
+
+        } catch (\Exception $e) {
+            return redirect()->route('assignments.list')
+                ->with('error', 'Failed to load submissions: ' . $e->getMessage());
         }
     }
 
