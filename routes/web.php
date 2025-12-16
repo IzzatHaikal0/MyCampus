@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LessonController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AssignmentController;
+use App\Http\Controllers\GradeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -44,6 +45,8 @@ Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.
 
 Route::get('/asssignments/view', [AssignmentController::class, 'viewStudentAssignment'])->name('assignments.viewStudentAssignment');
 Route::post('/assignments/add-submission/{id}', [AssignmentController::class,'addSubmission'])->name('assignments.addSubmission');
+Route::post('/assignments/edit-submission/{id}', [AssignmentController::class,'editSubmission'])->name('assignments.editSubmission');
+
 /*
 |--------------------------------------------------------------------------
 | Teacher Routes
@@ -60,8 +63,10 @@ Route::post('/assignments/store', [AssignmentController::class,'store'])->name('
 Route::delete('/assignments/delete/{id}', [AssignmentController::class,'delete'])->name('assignments.delete');
 Route::get('/assignments/edit/{id}', [AssignmentController::class, 'edit'])->name('assignments.edit');
 Route::post('assignments/update/{id}', [AssignmentController::class,'update'])->name('assignments.update');
+Route::get('/assignments/submission/{id}', [AssignmentController::class, 'viewListSubmission'])->name('submission-teacher.view');
 
 
+Route::post('/assignments/grade-submission/{id}', [GradeController::class, 'addGrading'])->name('submissions.addGrading');
 /*
 |--------------------------------------------------------------------------
 | Admin Routes
