@@ -46,7 +46,7 @@ Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.
 | Teacher Routes
 |--------------------------------------------------------------------------
 */
-Route::get('/teacher/dashboard', action: fn() => view('teacher.dashboard'))->name('teacher.dashboard');
+Route::get('/teacher/dashboard', [LessonController::class, 'teacherDashboard'])->name('teacher.dashboard');
 Route::get('/lessons/add', [LessonController::class, 'create'])->name('lessons.add');
 Route::post('/lessons/store', [LessonController::class, 'store'])->name('lessons.store');
 
@@ -60,3 +60,23 @@ Route::get('/assignments/add', [AssignmentController::class, 'create'])->name('a
 |--------------------------------------------------------------------------
 */
 Route::get('/admin/dashboard', fn() => view('admin.dashboard'))->name('admin.dashboard');
+
+// Show Add Lesson page
+Route::prefix('lessons')->group(function () {
+    Route::get('/add', [LessonController::class, 'create'])->name('lessons.add');
+    Route::post('/store', [LessonController::class, 'store'])->name('lessons.store');
+
+    // AJAX route for overlap check
+    Route::post('/check-overlap', [LessonController::class, 'checkOverlap'])->name('lessons.check-overlap');
+});
+
+// Teacher lesson management
+Route::prefix('lessons')->group(function () {
+    Route::get('/list', [LessonController::class, 'index'])->name('lessons.list');
+    Route::get('/teacher/dashboard', [LessonController::class, 'teacherDashboard'])->name('teacher.dashboard');
+    Route::get('/edit/{id}', [LessonController::class, 'edit'])->name('lessons.edit');
+    Route::put('/update/{id}', [LessonController::class, 'update'])->name('lessons.update');  // ✅ This is important
+    Route::delete('/delete/{id}', [LessonController::class, 'destroy'])->name('lessons.destroy');
+    Route::get('/lessons/list', [LessonController::class, 'list'])->name('lessons.list');
+
+});

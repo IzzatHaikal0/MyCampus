@@ -36,6 +36,13 @@
                     </a>
                 </li>
                 <li>
+                    <a href="{{ route('lessons.list') }}" class="flex items-center gap-4 px-4 py-3 {{ request()->routeIs('lessons.list') ? 'text-white bg-gradient-to-r from-purple-600 to-pink-600' : 'text-gray-600 hover:bg-gray-100' }} rounded-xl transition">
+                        <i class="fas fa-list text-lg w-5"></i>
+                        <span class="sidebar-text">View All Lessons</span>
+                </a>
+                </li>
+
+                <li>
                     <a href="{{ route('assignments.list') }}" class="flex items-center gap-4 px-4 py-3 {{ request()->routeIs('assignments.add') ? 'text-white bg-gradient-to-r from-purple-600 to-pink-600' : 'text-gray-600 hover:bg-gray-100' }} rounded-xl transition">
                         <i class="fas fa-tasks text-lg w-5"></i>
                         <span class="sidebar-text">Assignments</span>
