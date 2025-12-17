@@ -52,12 +52,20 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
-        $request->validate([
+        // Base validation rules
+        $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|email',
             'password' => 'required|string|min:6',
             'role' => 'required|in:student,teacher,administrator',
-        ]);
+        ];
+
+        // Add class_section validation only for students
+        if ($request->role === 'student') {
+            $rules['class_section'] = 'required|string';
+        }
+
+        $request->validate($rules);
 
         try {
             // Create Firebase user
@@ -71,12 +79,20 @@ class AuthController extends Controller
 
             $uid = $user->uid;
 
-            // Save user details in Firebase Realtime Database
-            $this->database->getReference("users/{$uid}")->set([
+            // Prepare user data
+            $userData = [
                 'name' => $request->name,
                 'email' => $request->email,
                 'role' => $request->role,
-            ]);
+            ];
+
+            // Add class_section only if user is a student
+            if ($request->role === 'student') {
+                $userData['class_section'] = $request->class_section;
+            }
+
+            // Save user details in Firebase Realtime Database
+            $this->database->getReference("users/{$uid}")->set($userData);
 
             return redirect()->route('login')
                 ->with('success', 'Account created successfully! You can now login.');
