@@ -7,7 +7,6 @@ use Kreait\Firebase\Factory;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Session;
 
-
 class LessonController extends Controller
 {
     protected $database;
@@ -28,28 +27,31 @@ class LessonController extends Controller
     }
 
     protected function firebaseDatabase()
-{
-    $factory = (new Factory)
-        ->withServiceAccount(base_path('firebase_credentials.json')) // your JSON file
-        ->withDatabaseUri(env('FIREBASE_DATABASE_URL')); // make sure this is in your .env
+    {
+        $factory = (new Factory)
+            ->withServiceAccount(base_path('firebase_credentials.json'))
+            ->withDatabaseUri(env('FIREBASE_DATABASE_URL'));
 
-    return $factory->createDatabase();
-}
+        return $factory->createDatabase();
+    }
 
-
-    // Show Add Lesson Form
+    /* =========================================================
+       CREATE LESSON VIEW
+    ========================================================= */
     public function create()
     {
         return view('lessonscheduling.addlesson');
     }
 
-    // Store Lesson
+    /* =========================================================
+       STORE LESSON
+    ========================================================= */
     public function store(Request $request)
     {
         // Validation
         $request->validate([
             'subject_name' => 'required|string|max:255',
-            'class_title' => 'required|string|max:255',
+            'class_section' => 'required|string|max:255', // updated
             'date' => 'required|date',
             'start_time' => 'required',
             'end_time' => 'required|after:start_time',
@@ -57,45 +59,42 @@ class LessonController extends Controller
         ]);
 
         try {
-            // Convert times to comparable format
             $newStart = strtotime($request->start_time);
             $newEnd = strtotime($request->end_time);
 
-            // Get all existing lessons on the same date
-            $lessonsRef = $this->database->getReference("lessons")->getValue();
+            // Get existing lessons
+            $lessonsRef = $this->database->getReference("lessons")->getValue() ?? [];
             $existingLessons = [];
 
-            if ($lessonsRef) {
-                foreach ($lessonsRef as $lesson) {
-                    if ($lesson['date'] === $request->date) {
-                        $existingLessons[] = $lesson;
-                    }
+            foreach ($lessonsRef as $lesson) {
+                if (($lesson['date'] ?? null) === $request->date) {
+                    $existingLessons[] = $lesson;
                 }
             }
 
-            // Check for overlapping times
+            // Check overlap
             foreach ($existingLessons as $lesson) {
                 $existingStart = strtotime($lesson['start_time']);
                 $existingEnd = strtotime($lesson['end_time']);
-
-                // Overlap condition: if new lesson start < existing end AND new lesson end > existing start
                 if (($newStart < $existingEnd) && ($newEnd > $existingStart)) {
                     return back()->with('error', 'Another lesson is already scheduled at this time.');
                 }
             }
 
-            // Store the new lesson in Firebase
-        $lessonRef = $this->database->getReference('lessons')->push();
-        $lessonRef->set([
-        'subject_name' => $request->subject_name,
-        'class_title' => $request->class_title,
-        'date' => $request->date,
-        'start_time' => $request->start_time,
-        'end_time' => $request->end_time,
-        'locationmeeting_link' => $request->locationmeeting_link,
-        'teacher_id' => session('firebase_user.uid'), // <-- Add this line
-        ]);
-
+            // Store lesson
+            $lessonRef = $this->database->getReference('lessons')->push();
+            $lessonRef->set([
+                'subject_name' => $request->subject_name,
+                'class_section' => $request->class_section, // always use class_section
+                'date' => $request->date,
+                'start_time' => $request->start_time,
+                'end_time' => $request->end_time,
+                'locationmeeting_link' => $request->locationmeeting_link,
+                'teacher_id' => session('firebase_user.uid'),
+                'repeat_schedule' => $request->repeat_schedule ?? null,
+                'repeat_frequency' => $request->repeat_frequency ?? null,
+                'repeat_until' => $request->repeat_until ?? null,
+            ]);
 
             return redirect()->route('lessons.add')->with('success', 'Lesson added successfully.');
         } catch (\Exception $e) {
@@ -103,26 +102,397 @@ class LessonController extends Controller
         }
     }
 
-    // AJAX check for overlapping lessons
+    /* =========================================================
+       EDIT LESSON
+    ========================================================= */
+    public function edit($id)
+    {
+        $lesson = $this->firebaseDatabase()->getReference('lessons/' . $id)->getValue();
+
+        if (!$lesson) {
+            return back()->with('error', 'Lesson not found.');
+        }
+
+        return view('lessonscheduling.edit', [
+            'id' => $id,
+            'lesson' => $lesson
+        ]);
+    }
+
+    /* =========================================================
+       UPDATE LESSON
+    ========================================================= */
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'subject_name' => 'required|string|max:255',
+            'class_section' => 'required|string|max:255',
+            'date' => 'required|date',
+            'start_time' => 'required',
+            'end_time' => 'required|string',
+            'locationmeeting_link' => 'required|string|max:255',
+        ]);
+
+        $database = $this->firebaseDatabase();
+        $oldLesson = $database->getReference('lessons/' . $id)->getValue();
+
+        if (!$oldLesson) {
+            return back()->with('error', 'Lesson not found.');
+        }
+
+        $database->getReference('lessons/' . $id)->update([
+            'subject_name' => $request->subject_name,
+            'class_section' => $request->class_section,
+            'date' => $request->date,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
+            'locationmeeting_link' => $request->locationmeeting_link,
+            'repeat_schedule' => $request->repeat_schedule ?? null,
+            'repeat_frequency' => $request->repeat_frequency ?? null,
+            'repeat_until' => $request->repeat_until ?? null,
+        ]);
+
+        // Detect changes for notifications
+        $notifications = [];
+        if ($oldLesson['start_time'] !== $request->start_time || $oldLesson['end_time'] !== $request->end_time) {
+            $notifications[] = $this->buildNotification('time', $id, $oldLesson, $request->all());
+        }
+        if ($oldLesson['locationmeeting_link'] !== $request->locationmeeting_link) {
+            $notifications[] = $this->buildNotification('location', $id, $oldLesson, $request->all());
+        }
+
+        foreach ($notifications as $notification) {
+            $this->notifyStudentsByClass($oldLesson['class_section'], $notification);
+        }
+
+        return redirect()->route('lessons.list')->with('success', 'Lesson updated successfully.');
+    }
+
+    /* =========================================================
+       DELETE LESSON
+    ========================================================= */
+    public function destroy($id)
+    {
+        $database = $this->firebaseDatabase();
+        $lesson = $database->getReference('lessons/' . $id)->getValue();
+
+        if ($lesson) {
+            $notification = $this->buildNotification('cancelled', $id, $lesson);
+
+            if (!empty($lesson['class_section'])) {
+                $this->notifyStudentsByClass($lesson['class_section'], $notification);
+            }
+
+            $database->getReference('lessons/' . $id)->remove();
+        }
+
+        return redirect()->route('lessons.list')->with('success', 'Lesson cancelled successfully!');
+    }
+
+    /* =========================================================
+       LIST LESSONS
+    ========================================================= */
+    public function index()
+    {
+        $lessonsData = $this->database->getReference('lessons')->getValue() ?? [];
+        $lessons = collect($lessonsData)->map(function ($lesson, $id) {
+            $lesson['class_section'] = $lesson['class_section'] ?? $lesson['class_title'] ?? null;
+            return array_merge(['id' => $id], $lesson);
+        })->all();
+
+        return view('lessonscheduling.list', ['lessons' => $lessons]);
+    }
+
+    public function list()
+    {
+        $teacherId = session('firebase_user.uid');
+        $lessonsRef = $this->database->getReference('lessons')->getValue() ?? [];
+        $lessons = [];
+
+        foreach ($lessonsRef as $id => $lesson) {
+            if (($lesson['teacher_id'] ?? null) === $teacherId) {
+                $lesson['class_section'] = $lesson['class_section'] ?? $lesson['class_title'] ?? null;
+                $lessons[$id] = $lesson;
+            }
+        }
+
+        return view('lessonscheduling.list', compact('lessons'));
+    }
+
+    /* =========================================================
+       DASHBOARDS
+    ========================================================= */
+    public function dashboard()
+    {
+        $lessons = $this->database->getReference('lessons')->getValue() ?? [];
+        return view('teacher.dashboard', ['lessons' => $lessons]);
+    }
+
+    public function teacherDashboard()
+{
+    $teacherId = session('firebase_user.uid');
+    $lessonsRef = $this->database->getReference('lessons')->getValue() ?? [];
+
+    $today = Carbon::now('Asia/Kuala_Lumpur')->startOfDay();
+    $lessonsToday = [];
+
+    foreach ($lessonsRef as $id => $lesson) {
+        if (($lesson['teacher_id'] ?? null) !== $teacherId) continue;
+        if (empty($lesson['date'])) continue;
+
+        $lessonDate = Carbon::parse($lesson['date'], 'Asia/Kuala_Lumpur')->startOfDay();
+
+        // ✅ NORMAL lesson today
+        if ($lessonDate->equalTo($today)) {
+            $lesson['id'] = $id;
+            $lessonsToday[] = $lesson;
+            continue;
+        }
+
+        // ✅ REPEATED lessons
+        if (!empty($lesson['repeat_frequency']) && !empty($lesson['repeat_until'])) {
+            $start = Carbon::parse($lesson['date'], 'Asia/Kuala_Lumpur')->startOfDay();
+            $end   = Carbon::parse($lesson['repeat_until'], 'Asia/Kuala_Lumpur')->endOfDay();
+
+            if ($today->between($start, $end)) {
+                if (
+                    $lesson['repeat_frequency'] === 'daily' ||
+                    ($lesson['repeat_frequency'] === 'weekly' &&
+                     $today->dayOfWeek === $start->dayOfWeek)
+                ) {
+                    $lessonCopy = $lesson;
+                    $lessonCopy['date'] = $today->toDateString();
+                    $lessonCopy['id'] = $id;
+                    $lessonsToday[] = $lessonCopy;
+                }
+            }
+        }
+    }
+
+    usort($lessonsToday, fn($a, $b) => strcmp($a['start_time'], $b['start_time']));
+
+    return view('teacher.dashboard', ['lessons' => $lessonsToday]);
+}
+
+
+    public function studentDashboard()
+{
+    $user = session('firebase_user');
+    if (!$user) return redirect('/login');
+
+    $student = $this->database->getReference('users/' . $user['uid'])->getValue();
+    if (!$student || empty($student['class_section'])) {
+        return view('student.dashboard', ['todayLessons' => []]);
+    }
+
+    $classSection = $student['class_section'];
+    $lessonsRef = $this->database->getReference('lessons')->getValue() ?? [];
+
+    $today = Carbon::now('Asia/Kuala_Lumpur')->startOfDay();
+    $todayLessons = [];
+
+    foreach ($lessonsRef as $id => $lesson) {
+        $lessonClass = $lesson['class_section'] ?? $lesson['class_title'] ?? null;
+        if ($lessonClass !== $classSection || empty($lesson['date'])) continue;
+
+        $lessonDate = Carbon::parse($lesson['date'], 'Asia/Kuala_Lumpur')->startOfDay();
+
+        // ✅ NORMAL lesson today
+        if ($lessonDate->equalTo($today)) {
+            $lesson['id'] = $id;
+            $todayLessons[] = $lesson;
+            continue;
+        }
+
+        // ✅ REPEATED lessons
+        if (!empty($lesson['repeat_frequency']) && !empty($lesson['repeat_until'])) {
+            $start = Carbon::parse($lesson['date'], 'Asia/Kuala_Lumpur')->startOfDay();
+            $end   = Carbon::parse($lesson['repeat_until'], 'Asia/Kuala_Lumpur')->endOfDay();
+
+            if ($today->between($start, $end)) {
+                if (
+                    $lesson['repeat_frequency'] === 'daily' ||
+                    ($lesson['repeat_frequency'] === 'weekly' &&
+                     $today->dayOfWeek === $start->dayOfWeek)
+                ) {
+                    $lessonCopy = $lesson;
+                    $lessonCopy['date'] = $today->toDateString();
+                    $lessonCopy['id'] = $id;
+                    $todayLessons[] = $lessonCopy;
+                }
+            }
+        }
+    }
+
+    usort($todayLessons, fn($a, $b) => strcmp($a['start_time'], $b['start_time']));
+
+    return view('student.dashboard', ['todayLessons' => $todayLessons]);
+}
+
+    public function studentTimetable(Request $request)
+    {
+        $user = Session::get('firebase_user');
+        if (!$user) return redirect('/login')->with('error', 'Please login first');
+
+        $studentId = $user['uid'];
+        $studentSnapshot = $this->database->getReference('users/' . $studentId)->getValue();
+
+        if (!$studentSnapshot || empty($studentSnapshot['class_section'])) {
+            return view('lessonscheduling.viewlesson', ['lessons' => [], 'classSection' => null, 'error' => 'You are not assigned to any class.']);
+        }
+
+        $classSection = $studentSnapshot['class_section'];
+        $lessonsSnapshot = $this->database->getReference('lessons')->getValue() ?? [];
+        $lessons = [];
+
+        $lessons = [];
+
+foreach ($lessonsSnapshot as $id => $lesson) {
+    $lessonClass = $lesson['class_section'] ?? $lesson['class_title'] ?? null;
+    if ($lessonClass !== $classSection || empty($lesson['date'])) continue;
+
+    // 1️⃣ Normal lesson
+    $lesson['id'] = $id;
+    $lessons[] = $lesson;
+
+    // 2️⃣ Repeated lessons
+    if (!empty($lesson['repeat_frequency']) && !empty($lesson['repeat_until'])) {
+        $start = Carbon::parse($lesson['date'], 'Asia/Kuala_Lumpur')->startOfDay();
+        $end   = Carbon::parse($lesson['repeat_until'], 'Asia/Kuala_Lumpur')->endOfDay();
+
+        $current = $start->copy();
+
+        while ($current->lte($end)) {
+            if (
+                $lesson['repeat_frequency'] === 'daily' ||
+                ($lesson['repeat_frequency'] === 'weekly' &&
+                 $current->dayOfWeek === $start->dayOfWeek)
+            ) {
+                // skip original date (already added)
+                if (!$current->equalTo($start)) {
+                    $lessonCopy = $lesson;
+                    $lessonCopy['date'] = $current->toDateString();
+                    $lessonCopy['id'] = $id;
+                    $lessons[] = $lessonCopy;
+                }
+            }
+
+            $current->addDay();
+        }
+    }
+}
+
+
+        // Sort by date and start_time
+        usort($lessons, fn($a,$b) => strcmp($a['date'],$b['date']) ?: strcmp($a['start_time'],$b['start_time']));
+        return view('lessonscheduling.viewlesson', ['lessons' => $lessons, 'classSection' => $classSection]);
+    }
+
+  /* =========================================================
+   NOTIFICATIONS
+========================================================= */
+private function notifyStudentsByClass($classSection, $notification)
+{
+    $users = $this->database->getReference('users')->getValue() ?? [];
+    foreach ($users as $uid => $user) {
+        if (($user['role'] ?? null) === 'student' && ($user['class_section'] ?? null) === $classSection) {
+            // Push notification with read=false
+            $this->database->getReference("notifications/{$uid}")->push(array_merge($notification, ['read' => false]));
+        }
+    }
+}
+
+private function buildNotification($type, $lessonId, $lesson, $newData = [])
+{
+    $createdAt = now()->toIso8601String(); // ISO format timestamp
+    $classDate = $lesson['date'] ?? ($newData['date'] ?? 'N/A'); // get the lesson date
+
+    switch ($type) {
+        case 'cancelled':
+            return [
+                'type' => 'lesson_cancelled',
+                'title' => 'Class Cancelled',
+                'message' => "{$lesson['subject_name']} class on {$classDate} has been cancelled.",
+                'lesson_id' => $lessonId,
+                'class_date' => $classDate, // <-- include class date
+                'read' => false,
+                'created_at' => $createdAt,
+            ];
+        case 'time':
+            return [
+                'type' => 'lesson_time_changed',
+                'title' => 'Class Time Changed',
+                'message' => "{$lesson['subject_name']} class on {$classDate} changed time to {$newData['start_time']} - {$newData['end_time']}.",
+                'lesson_id' => $lessonId,
+                'class_date' => $classDate, // <-- include class date
+                'read' => false,
+                'created_at' => $createdAt,
+            ];
+        case 'location':
+            return [
+                'type' => 'lesson_location_changed',
+                'title' => 'Class Location Changed',
+                'message' => "{$lesson['subject_name']} class on {$classDate} location updated to {$newData['locationmeeting_link']}.",
+                'lesson_id' => $lessonId,
+                'class_date' => $classDate, // <-- include class date
+                'read' => false,
+                'created_at' => $createdAt,
+            ];
+    }
+    return [];
+}
+
+/* =========================================================
+   FETCH STUDENT NOTIFICATIONS
+========================================================= */
+public function studentNotifications()
+{
+    $user = session('firebase_user');
+    if (!$user) return redirect('/login');
+
+    $notificationsRef = $this->database->getReference('notifications/' . $user['uid'])->getValue() ?? [];
+    
+    $notifications = collect($notificationsRef)
+        ->sortByDesc('created_at') // newest first
+        ->take(50) // limit last 50
+        ->all();
+
+    return view('student.notifications', compact('notifications'));
+}
+
+/* =========================================================
+   MARK NOTIFICATION AS READ
+========================================================= */
+public function markNotificationRead($notificationId)
+{
+    $user = session('firebase_user');
+    if (!$user) return response()->json(['error' => 'Unauthorized'], 401);
+
+    $this->database->getReference("notifications/{$user['uid']}/{$notificationId}")
+        ->update(['read' => true]);
+
+    return response()->json(['success' => true]);
+}
+
+    /* =========================================================
+       CHECK OVERLAP
+    ========================================================= */
     public function checkOverlap(Request $request)
     {
         $date = $request->date;
         $newStart = strtotime($request->start_time);
         $newEnd = strtotime($request->end_time);
 
-        $lessonsRef = $this->database->getReference('lessons')->getValue();
+        $lessonsRef = $this->database->getReference('lessons')->getValue() ?? [];
         $overlap = false;
 
-        if ($lessonsRef) {
-            foreach ($lessonsRef as $lesson) {
-                if ($lesson['date'] === $date) {
-                    $existingStart = strtotime($lesson['start_time']);
-                    $existingEnd = strtotime($lesson['end_time']);
-
-                    if (($newStart < $existingEnd) && ($newEnd > $existingStart)) {
-                        $overlap = true;
-                        break;
-                    }
+        foreach ($lessonsRef as $lesson) {
+            if (($lesson['date'] ?? null) === $date) {
+                $existingStart = strtotime($lesson['start_time']);
+                $existingEnd = strtotime($lesson['end_time']);
+                if (($newStart < $existingEnd) && ($newEnd > $existingStart)) {
+                    $overlap = true;
+                    break;
                 }
             }
         }
@@ -130,139 +500,30 @@ class LessonController extends Controller
         return response()->json(['overlap' => $overlap]);
     }
 
-    public function dashboard()
-{
-    $lessons = $this->database->getReference('lessons')->getValue() ?? [];
-   return view('teacher.dashboard', ['lessons' => $lessons]);
+    /* =========================================================
+       MIGRATE OLD LESSONS
+    ========================================================= */
+    public function migrateClassSection()
+    {
+        $factory = (new \Kreait\Firebase\Factory())
+            ->withServiceAccount(base_path('firebase_credentials.json'))
+            ->withDatabaseUri(env('FIREBASE_DATABASE_URL'));
 
-}
+        $db = $factory->createDatabase();
+        $lessons = $db->getReference('lessons')->getValue() ?? [];
+        $updated = 0;
 
-public function teacherDashboard()
-{
-    $firebase = (new Factory)
-        ->withServiceAccount(base_path('firebase_credentials.json'))
-        ->withDatabaseUri(env('FIREBASE_DATABASE_URL'));
-
-    $database = $firebase->createDatabase();
-
-    $lessonsRef = $database->getReference('lessons')->getValue(); // fetch all lessons
-
-    $today = Carbon::today()->toDateString();
-    $teacherId = session('firebase_user.uid'); // get logged-in teacher's Firebase UID
-
-    $lessons = [];
-
-    if ($lessonsRef) {
-        foreach ($lessonsRef as $id => $lesson) {
-            // Filter by today AND teacher_id
-            if (isset($lesson['date'], $lesson['teacher_id']) 
-                && $lesson['date'] === $today 
-                && $lesson['teacher_id'] === $teacherId) {
-                $lessons[$id] = $lesson;
+        foreach ($lessons as $id => $lesson) {
+            if (!isset($lesson['class_section']) && isset($lesson['class_title'])) {
+                $db->getReference('lessons/' . $id)->update([
+                    'class_section' => $lesson['class_title']
+                ]);
+                $updated++;
             }
         }
+
+        return "Migration completed. Updated {$updated} lessons.";
     }
-
-    return view('teacher.dashboard', compact('lessons'));
-}
-
-public function edit($id)
-    {
-        $database = $this->firebaseDatabase();
-
-        $lesson = $database->getReference('lessons/' . $id)->getValue();
-
-        if (!$lesson) {
-            return redirect()->back()->with('error', 'Lesson not found.');
-        }
-
-        // Pass the array directly to the Blade
-        return view('lessonscheduling.edit', [
-            'id' => $id,
-            'lesson' => $lesson
-        ]);
-    }
-
-    public function update(Request $request, $id)
-{
-    $request->validate([
-        'subject_name' => 'required|string',
-        'class_title' => 'required|string',
-        'date' => 'required|date',
-        'start_time' => 'required|string',
-        'end_time' => 'required|string',
-        'locationmeeting_link' => 'required|string',
-        // optional fields
-        'repeat_schedule' => 'nullable|boolean',
-        'repeat_frequency' => 'nullable|string',
-        'repeat_until' => 'nullable|date',
-    ]);
-
-    $database = $this->firebaseDatabase();
-
-    $database->getReference('lessons/' . $id)->update([
-        'subject_name' => $request->subject_name,
-        'class_title' => $request->class_title,
-        'date' => $request->date,
-        'start_time' => $request->start_time,
-        'end_time' => $request->end_time,
-        'locationmeeting_link' => $request->locationmeeting_link,
-        'repeat_schedule' => $request->repeat_schedule ? 1 : 0,
-        'repeat_frequency' => $request->repeat_frequency ?? null,
-        'repeat_until' => $request->repeat_until ?? null,
-    ]);
-
-    return redirect()->route('lessons.list')->with('success', 'Lesson updated successfully!');
-}
-
-    public function destroy($id)
-    {
-        $database = $this->firebaseDatabase();
-
-        $database->getReference('lessons/' . $id)->remove();
-
-        return redirect()->route('lessons.list')->with('success', 'Lesson deleted successfully!');
-    }
-
-    public function index()
-{
-    $database = $this->firebaseDatabase();
-
-    $lessonsData = $database->getReference('lessons')->getValue();
-
-    // Convert Firebase array to collection for easier use in Blade
-    $lessons = collect($lessonsData)->map(function ($lesson, $id) {
-        return array_merge(['id' => $id], $lesson);
-    })->all();
-
-    return view('lessonscheduling.list', [
-        'lessons' => $lessons
-    ]);
-}
-
-public function list()
-{
-    $firebase = (new \Kreait\Firebase\Factory)
-        ->withServiceAccount(base_path('firebase_credentials.json'))
-        ->withDatabaseUri(env('FIREBASE_DATABASE_URL'));
-
-    $database = $firebase->createDatabase();
-    $lessonsRef = $database->getReference('lessons')->getValue();
-
-    $teacherId = session('firebase_user.uid');
-    $lessons = [];
-
-    if ($lessonsRef) {
-        foreach ($lessonsRef as $id => $lesson) {
-            if (isset($lesson['teacher_id']) && $lesson['teacher_id'] === $teacherId) {
-                $lessons[$id] = $lesson;
-            }
-        }
-    }
-
-    return view('lessonscheduling.list', compact('lessons'));
-}
-
 
 
 }

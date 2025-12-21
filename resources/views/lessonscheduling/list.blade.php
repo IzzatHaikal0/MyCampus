@@ -68,13 +68,16 @@
                             <div class="bg-purple-50 border-l-4 border-purple-600 rounded-lg p-4 flex justify-between items-center hover:shadow-md transition">
                                 <div>
                                     <div class="font-semibold text-gray-800">{{ $lesson['subject_name'] ?? 'Untitled Subject' }}</div>
-                                    <div class="text-gray-600 text-sm">{{ $lesson['class_title'] ?? 'No class title' }}</div>
-                                    <div class="text-gray-500 text-sm mt-1">
-                                        {{ $lesson['date'] ?? '' }} | {{ $lesson['start_time'] ?? '' }} - {{ $lesson['end_time'] ?? '' }}
-                                    </div>
-                                    <div class="text-gray-500 text-sm mt-1">
-                                        Location: {{ $lesson['locationmeeting_link'] ?? 'No location' }}
-                                    </div>
+<div class="text-gray-600 text-sm">
+    {{ $lesson['class_section'] ?? ($lesson['class_title'] ?? 'No class section') }}
+</div>
+<div class="text-gray-500 text-sm mt-1">
+    {{ $lesson['date'] ?? '' }} | {{ $lesson['start_time'] ?? '' }} - {{ $lesson['end_time'] ?? '' }}
+</div>
+<div class="text-gray-500 text-sm mt-1">
+    Location: {{ $lesson['locationmeeting_link'] ?? 'No location' }}
+</div>
+
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <a href="{{ route('lessons.edit', $id) }}" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition">

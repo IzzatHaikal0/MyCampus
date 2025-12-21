@@ -93,3 +93,20 @@ Route::prefix('lessons')->group(function () {
     Route::get('/lessons/list', [LessonController::class, 'list'])->name('lessons.list');
 
 });
+
+Route::get('/student/timetable',
+    [LessonController::class, 'studentTimetable']
+)->name('student.timetable');
+
+Route::get('/student/dashboard', [LessonController::class, 'studentDashboard'])
+    ->name('student.dashboard');
+
+Route::get('/migrate-lessons-class-section', [LessonController::class, 'migrateClassSection']);
+
+Route::middleware('auth')->group(function () {
+    Route::get('/notifications', [LessonController::class, 'studentNotifications'])->name('notifications.list');
+    Route::post('/notifications/mark-read/{id}', [LessonController::class, 'markNotificationRead'])->name('notifications.markRead');
+});
+
+Route::get('/fix-lessons', [LessonController::class, 'autoFixLessonRepeats']);
+

@@ -30,12 +30,6 @@
                     </a>
                 </li>
                 <li>
-                    <a href="{{ route('lessons.add') }}" class="flex items-center gap-4 px-4 py-3 {{ request()->routeIs('lessons.add') ? 'text-white bg-gradient-to-r from-purple-600 to-pink-600' : 'text-gray-600 hover:bg-gray-100' }} rounded-xl transition">
-                        <i class="fas fa-book text-lg w-5"></i>
-                        <span class="sidebar-text">My Courses</span>
-                    </a>
-                </li>
-                <li>
                     <a href="{{ route('lessons.list') }}" class="flex items-center gap-4 px-4 py-3 {{ request()->routeIs('lessons.list') ? 'text-white bg-gradient-to-r from-purple-600 to-pink-600' : 'text-gray-600 hover:bg-gray-100' }} rounded-xl transition">
                         <i class="fas fa-list text-lg w-5"></i>
                         <span class="sidebar-text">View All Lessons</span>
@@ -99,6 +93,17 @@
                         <i class="fas fa-home text-lg w-5"></i>
                         <span class="sidebar-text">Dashboard</span>
                     </a>
+                </li>
+                <li>
+               <a href="{{ route('student.timetable') }}"
+                 class="flex items-center gap-4 px-4 py-3
+                     {{ request()->routeIs('student.timetable') 
+                       ? 'text-white bg-gradient-to-r from-purple-600 to-pink-600' 
+                      : 'text-gray-600 hover:bg-gray-100' }}
+                       rounded-xl transition">
+              <i class="fas fa-calendar-alt text-lg w-5"></i>
+             <span class="sidebar-text">My Timetable</span>
+              </a>
                 </li>
                 <li>
                     <a href="#" class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl transition">

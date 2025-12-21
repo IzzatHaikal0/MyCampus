@@ -55,14 +55,15 @@
             <div class="bg-white rounded-2xl shadow-lg p-6">
                 <form method="POST" action="{{ route('lessons.store') }}" class="space-y-4" id="lessonForm">
                     @csrf
+
                     <div>
                         <label class="block font-semibold text-gray-700">Subject Name:</label>
                         <input type="text" name="subject_name" value="{{ old('subject_name') }}" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
                     </div>
 
                     <div>
-                        <label class="block font-semibold text-gray-700">Class Title:</label>
-                        <input type="text" name="class_title" value="{{ old('class_title') }}" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
+                        <label class="block font-semibold text-gray-700">Class Section:</label>
+                       <input type="text" name="class_section" value="{{ old('class_section') }}" required class="w-full border border-gray-300 rounded-lg p-2 mt-1" placeholder="e.g. 1A, 2B">
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -84,15 +85,15 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-4 mt-2">
                         <div class="flex items-center gap-2">
-                            <input type="checkbox" name="repeat_schedule" value="1" {{ old('repeat_schedule') ? 'checked' : '' }} class="h-4 w-4 text-purple-600">
+                            <input type="checkbox" name="repeat_schedule" value="1" {{ old('repeat_schedule') ? 'checked' : '' }} class="h-4 w-4 text-purple-600" id="repeatLesson">
                             <label class="text-gray-700 font-semibold">Repeat Lesson</label>
                         </div>
 
                         <div>
                             <label class="block font-semibold text-gray-700">Repeat Frequency:</label>
-                            <select name="repeat_frequency" class="border border-gray-300 rounded-lg p-2 mt-1">
+                            <select name="repeat_frequency" id="repeatFrequency" class="border border-gray-300 rounded-lg p-2 mt-1">
                                 <option value="weekly" {{ old('repeat_frequency') == 'weekly' ? 'selected' : '' }}>Weekly</option>
                                 <option value="daily" {{ old('repeat_frequency') == 'daily' ? 'selected' : '' }}>Daily</option>
                             </select>
@@ -100,7 +101,7 @@
 
                         <div>
                             <label class="block font-semibold text-gray-700">Repeat Until:</label>
-                            <input type="date" name="repeat_until" value="{{ old('repeat_until') }}" class="border border-gray-300 rounded-lg p-2 mt-1" min="{{ date('Y-m-d') }}">
+                            <input type="date" name="repeat_until" id="repeatUntil" value="{{ old('repeat_until') }}" class="border border-gray-300 rounded-lg p-2 mt-1" min="{{ date('Y-m-d') }}">
                         </div>
                     </div>
 
@@ -112,118 +113,12 @@
         </main>
     </div>
 
-    <script>
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('mainContent');
-            const sidebarTexts = document.querySelectorAll('.sidebar-text');
-            
-            if (sidebar.classList.contains('w-72')) {
-                sidebar.classList.remove('w-72');
-                sidebar.classList.add('w-20');
-                mainContent.classList.remove('ml-72');
-                mainContent.classList.add('ml-20');
-                sidebarTexts.forEach(text => text.classList.add('hidden'));
-            } else {
-                sidebar.classList.remove('w-20');
-                sidebar.classList.add('w-72');
-                mainContent.classList.remove('ml-20');
-                mainContent.classList.add('ml-72');
-                sidebarTexts.forEach(text => text.classList.remove('hidden'));
-            }
-        }
-
-        // Ensure end time is after start time
-        document.getElementById('lessonForm').addEventListener('submit', function(e) {
-            const start = document.getElementById('startTime').value;
-            const end = document.getElementById('endTime').value;
-            if (start >= end) {
-                e.preventDefault();
-                alert('End Time must be after Start Time.');
-            }
-        });
-    </script>
-</body>
-</html>
-<!-- Keep everything above unchanged -->
-
-<form method="POST" action="{{ route('lessons.store') }}" class="space-y-4" id="lessonForm">
-    @csrf
-    <!-- ... existing inputs ... -->
-    <button type="submit" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition">
-        <i class="fas fa-plus mr-2"></i> Add Lesson
-    </button>
-</form>
-
 <script>
+    // Toggle sidebar
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.getElementById('mainContent');
         const sidebarTexts = document.querySelectorAll('.sidebar-text');
-        
-        if (sidebar.classList.contains('w-72')) {
-            sidebar.classList.remove('w-72');
-            sidebar.classList.add('w-20');
-            mainContent.classList.remove('ml-72');
-            mainContent.classList.add('ml-20');
-            sidebarTexts.forEach(text => text.classList.add('hidden'));
-        } else {
-            sidebar.classList.remove('w-20');
-            sidebar.classList.add('w-72');
-            mainContent.classList.remove('ml-20');
-            mainContent.classList.add('ml-72');
-            sidebarTexts.forEach(text => text.classList.remove('hidden'));
-        }
-    }
-
-    const lessonForm = document.getElementById('lessonForm');
-
-    lessonForm.addEventListener('submit', async function(e) {
-        e.preventDefault(); // Prevent default submission until overlap check passes
-
-        const start = document.getElementById('startTime').value;
-        const end = document.getElementById('endTime').value;
-        const date = document.getElementById('lessonDate').value;
-
-        // Ensure end time is after start time
-        if (start >= end) {
-            alert('End Time must be after Start Time.');
-            return;
-        }
-
-        try {
-            // AJAX request to check global lesson overlap
-            const response = await fetch('{{ route("lessons.check-overlap") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({ date, start_time: start, end_time: end })
-            });
-
-            const data = await response.json();
-
-            if (data.overlap) {
-                alert('Another lesson is already scheduled at this time. Please choose a different time.');
-                return;
-            }
-
-            // No overlap detected, submit the form
-            lessonForm.submit();
-
-        } catch (err) {
-            console.error(err);
-            alert('Error checking lesson overlap. Please try again.');
-        }
-    });
-
-    // Optional: Sidebar toggle function
-    function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const mainContent = document.getElementById('mainContent');
-        const sidebarTexts = document.querySelectorAll('.sidebar-text');
-
         if (sidebar.classList.contains('w-72')) {
             sidebar.classList.replace('w-72', 'w-20');
             mainContent.classList.replace('ml-72', 'ml-20');
@@ -235,4 +130,56 @@
         }
     }
 
+    // Show/hide repeat fields
+    const repeatCheckbox = document.getElementById('repeatLesson');
+    const repeatFrequency = document.getElementById('repeatFrequency').parentElement;
+    const repeatUntil = document.getElementById('repeatUntil').parentElement;
+
+    function toggleRepeatFields() {
+        const show = repeatCheckbox.checked;
+        repeatFrequency.style.display = show ? 'block' : 'none';
+        repeatUntil.style.display = show ? 'block' : 'none';
+    }
+
+    repeatCheckbox.addEventListener('change', toggleRepeatFields);
+    toggleRepeatFields();
+
+    // Form submit
+    const lessonForm = document.getElementById('lessonForm');
+    lessonForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const start = document.getElementById('startTime').value;
+        const end = document.getElementById('endTime').value;
+        const date = document.getElementById('lessonDate').value;
+
+        if (start >= end) {
+            alert('End Time must be after Start Time.');
+            return;
+        }
+
+        try {
+            const response = await fetch('{{ route("lessons.check-overlap") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ date, start_time: start, end_time: end })
+            });
+
+            const data = await response.json();
+            if (data.overlap) {
+                alert('Another lesson is already scheduled at this time.');
+                return;
+            }
+
+            lessonForm.submit();
+        } catch (err) {
+            console.error(err);
+            alert('Error checking lesson overlap. Please try again.');
+        }
+    });
 </script>
+</body>
+</html>

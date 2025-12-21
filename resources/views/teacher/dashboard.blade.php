@@ -61,21 +61,40 @@
     </h2>
 
     <div class="space-y-4">
-        @if(!empty($lessons))
-            @foreach($lessons as $id => $lesson)
-                <div class="bg-purple-50 border-l-4 border-purple-600 rounded-lg p-4 flex justify-between items-center hover:shadow-md transition">
-                    <div>
-                        <div class="font-semibold text-gray-800">{{ $lesson['subject_name'] ?? 'Untitled Subject' }}</div>
-                        <div class="text-sm text-gray-500">{{ $lesson['locationmeeting_link'] ?? 'No location' }}</div>
-                    </div>
-                    <div class="text-purple-600 font-semibold">
-                        {{ $lesson['start_time'] ?? '' }} - {{ $lesson['end_time'] ?? '' }}
-                    </div>
-                </div>
-            @endforeach
-        @else
-            <div class="text-gray-500">No classes scheduled for today.</div>
-        @endif
+       @if(count($lessons) > 0)
+    <div class="space-y-4">
+        @foreach($lessons as $lesson)
+            <div class="bg-white p-4 rounded-lg shadow">
+                <h3 class="text-lg font-semibold">
+                    {{ $lesson['subject_name'] }}
+                </h3>
+
+                <p class="text-sm text-gray-600">
+                    📚 Class Section:
+                    <span class="font-medium text-gray-800">
+                        {{ $lesson['class_section'] }}
+                    </span>
+                </p>
+
+                <p class="text-sm text-gray-600">
+                    🕒 Time:
+                    {{ $lesson['start_time'] }} – {{ $lesson['end_time'] }}
+                </p>
+
+                <p class="text-sm text-gray-600">
+                    📍 Location:
+                    {{ $lesson['locationmeeting_link'] }}
+                </p>
+            </div>
+        @endforeach
+    </div>
+@else
+    <div class="text-center py-10 text-gray-500">
+        <h2 class="text-xl font-semibold">No Classes Today</h2>
+        <p>Enjoy your free day!</p>
+    </div>
+@endif
+
     </div>
 </div>
 

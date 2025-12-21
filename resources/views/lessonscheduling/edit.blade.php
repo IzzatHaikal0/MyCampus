@@ -66,10 +66,10 @@
                     </div>
 
                     <div>
-                        <label class="block font-semibold text-gray-700">Class Title:</label>
-                        <input type="text" name="class_title" 
-                               value="{{ old('class_title', $lesson['class_title'] ?? '') }}" 
-                               required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
+                        <label class="block font-semibold text-gray-700">Class Section:</label>
+                        <input type="text" name="class_section" 
+                                value="{{ old('class_section', $lesson['class_section'] ?? '') }}" 
+                                required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -124,6 +124,16 @@
                                    value="{{ old('repeat_until', $lesson['repeat_until'] ?? '') }}" 
                                    class="border border-gray-300 rounded-lg p-2 mt-1" min="{{ date('Y-m-d') }}">
                         </div>
+
+                       <div class="flex items-center gap-2">
+    <input type="checkbox" name="cancel_this_date" value="1"
+           class="h-4 w-4 text-red-600">
+    <label class="text-red-600 font-semibold">
+        Cancel class on selected date only
+    </label>
+</div>
+
+
                     </div>
 
                     <button type="submit" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition">
