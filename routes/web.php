@@ -119,3 +119,14 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/fix-lessons', [LessonController::class, 'autoFixLessonRepeats']);
 
+// Student views grades
+Route::get('/student/grades', [GradeController::class, 'viewGrade'])
+    ->name('assignments.viewGrade');
+
+// Teacher adds grading
+Route::post('/assignments/grade-submission/{id}', [GradeController::class, 'addGrading'])
+    ->name('submissions.addGrading');
+
+// Teacher edits grading
+Route::post('/assignments/edit-grade/{id}', [GradeController::class, 'editGrading'])
+    ->name('submissions.editGrading');
