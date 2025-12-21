@@ -161,7 +161,7 @@
             <a href="/logout" class="flex items-center gap-4 px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition">
                 <i class="fas fa-sign-out-alt text-lg w-5"></i>
                 <span class="sidebar-text">Logout</span>
-            </a>
+             </a>
         </div>
     </nav>
 </aside>

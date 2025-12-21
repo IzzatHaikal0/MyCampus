@@ -46,7 +46,7 @@ Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.
 Route::get('/asssignments/view', [AssignmentController::class, 'viewStudentAssignment'])->name('assignments.viewStudentAssignment');
 Route::post('/assignments/add-submission/{id}', [AssignmentController::class,'addSubmission'])->name('assignments.addSubmission');
 Route::post('/assignments/edit-submission/{id}', [AssignmentController::class,'editSubmission'])->name('assignments.editSubmission');
-
+Route:: get('/assignments/view-grades/', [GradeController::class, 'viewGrade'])->name('assignments.viewGrade');
 /*
 |--------------------------------------------------------------------------
 | Teacher Routes
@@ -67,6 +67,7 @@ Route::get('/assignments/submission/{id}', [AssignmentController::class, 'viewLi
 
 
 Route::post('/assignments/grade-submission/{id}', [GradeController::class, 'addGrading'])->name('submissions.addGrading');
+Route::post('/assignments/grade-submission/edit/{id}', [GradeController::class, 'editGrading'])->name('assignments.editGrading');
 /*
 |--------------------------------------------------------------------------
 | Admin Routes
