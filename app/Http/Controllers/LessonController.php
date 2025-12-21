@@ -29,11 +29,14 @@ class LessonController extends Controller
     protected function firebaseDatabase()
     {
         $factory = (new Factory)
-            ->withServiceAccount(base_path('firebase_credentials.json'))
+            ->withServiceAccount(
+                storage_path('app/mycampus-f7b98-firebase-adminsdk-fbsvc-bdfda013a7.json')
+            )
             ->withDatabaseUri(env('FIREBASE_DATABASE_URL'));
 
         return $factory->createDatabase();
     }
+
 
     /* =========================================================
        CREATE LESSON VIEW
