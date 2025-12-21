@@ -92,6 +92,14 @@ Route::prefix('lessons')->group(function () {
     Route::delete('/delete/{id}', [LessonController::class, 'destroy'])->name('lessons.destroy');
     Route::get('/lessons/list', [LessonController::class, 'list'])->name('lessons.list');
 
+    // Student timetable
+Route::get('/student/timetable', [LessonController::class, 'studentTimetable'])
+    ->name('student.timetable');
+
+// Download PDF
+Route::get('/student/timetable/pdf', [LessonController::class, 'downloadTimetablePdf'])
+    ->name('student.timetable.pdf');
+
 });
 
 Route::get('/student/timetable',
