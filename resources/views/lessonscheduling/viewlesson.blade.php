@@ -31,31 +31,37 @@
         @endif
 
         @php
-            use Carbon\Carbon;
+use Carbon\Carbon;
 
-            $currentMonth = request()->get('month') 
-                            ? Carbon::parse(request()->get('month')) 
-                            : Carbon::now();
-            $startOfMonth = $currentMonth->copy()->startOfMonth();
-            $endOfMonth = $currentMonth->copy()->endOfMonth();
-            $daysInMonth = $startOfMonth->daysInMonth;
+$currentMonth = request()->get('month') 
+                ? Carbon::parse(request()->get('month')) 
+                : Carbon::now();
+$startOfMonth = $currentMonth->copy()->startOfMonth();
+$endOfMonth = $currentMonth->copy()->endOfMonth();
+$daysInMonth = $startOfMonth->daysInMonth;
 
-            // Map lessons by date
-            $lessonsByDate = [];
-            if(!empty($lessons)) {
-                foreach($lessons as $lesson) {
-                    $lessonDate = isset($lesson['date']) ? Carbon::parse($lesson['date'])->format('Y-m-d') : null;
-                    if($lessonDate) {
-                        $lesson['class_section'] = $lesson['class_section'] ?? $lesson['class_title'] ?? 'Unknown';
-                        $lessonsByDate[$lessonDate][] = $lesson; // append multiple lessons
-                    }
-                }
-            }
+// Map lessons by date
+$lessonsByDate = [];
+if(!empty($lessons)) {
+    foreach($lessons as $lesson) {
+        $lessonDate = isset($lesson['date']) ? Carbon::parse($lesson['date'])->format('Y-m-d') : null;
+        if(!$lessonDate) continue;
 
-            // Determine starting day of week (0=Sunday)
-            $firstDayOfWeek = $startOfMonth->dayOfWeek;
-            $weekdays = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-        @endphp
+        // ❌ Skip cancelled single lesson
+        if(!empty($lesson['cancelled'])) continue;
+
+        // ❌ Skip cancelled repeated lesson on this date
+        if(!empty($lesson['cancelled_dates'][$lessonDate])) continue;
+
+        $lesson['class_section'] = $lesson['class_section'] ?? $lesson['class_title'] ?? 'Unknown';
+        $lessonsByDate[$lessonDate][] = $lesson; // append multiple lessons
+    }
+}
+
+// Determine starting day of week (0=Sunday)
+$firstDayOfWeek = $startOfMonth->dayOfWeek;
+$weekdays = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+@endphp
 
         <!-- Month Navigation -->
         <div class="flex justify-between items-center mb-4">
