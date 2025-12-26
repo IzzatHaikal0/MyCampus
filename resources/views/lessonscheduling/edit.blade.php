@@ -55,6 +55,8 @@
             <!-- Edit Lesson Form -->
             <div class="bg-white rounded-2xl shadow-lg p-6">
                 <form method="POST" action="{{ route('lessons.update', $id) }}" class="space-y-4" id="lessonForm">
+                    <input type="hidden" name="original_date" value="{{ $lesson['date'] }}">
+
                     @csrf
                     @method('PUT')
 

@@ -63,7 +63,7 @@
 
                     <div>
                         <label class="block font-semibold text-gray-700">Class Section:</label>
-                       <input type="text" name="class_section" value="{{ old('class_section') }}" required class="w-full border border-gray-300 rounded-lg p-2 mt-1" placeholder="e.g. 1A, 2B">
+                       <input type="text" name="class_section" value="{{ old('class_section') }}" required class="w-full border border-gray-300 rounded-lg p-2 mt-1" placeholder="e.g. 1A, 1B, 2A, 2B">
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
