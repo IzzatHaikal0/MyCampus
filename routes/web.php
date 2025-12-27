@@ -6,6 +6,11 @@ use App\Http\Controllers\LessonController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\GradeController;
+<<<<<<< HEAD
+=======
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\StudyGroupController;
+>>>>>>> studygroup
 
 /*
 |--------------------------------------------------------------------------
@@ -74,3 +79,4 @@ Route::post('/assignments/grade-submission/edit/{id}', [GradeController::class, 
 |--------------------------------------------------------------------------
 */
 Route::get('/admin/dashboard', fn() => view('admin.dashboard'))->name('admin.dashboard');
+

@@ -111,6 +111,7 @@
                         <span class="sidebar-text">Grades</span>
                     </a>
                 </li>
+
             @endif
         </ul>
 
