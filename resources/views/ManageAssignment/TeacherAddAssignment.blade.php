@@ -59,7 +59,7 @@
                     </h2>
                 </div>
 
-                <form action="{{ route('assignments.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+                <form id="add-assignment-form" action="{{ route('assignments.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                     @csrf
 
                     <!-- Assignment Name -->
@@ -211,12 +211,14 @@
                     <!-- Action Buttons -->
                     <div class="flex gap-4 pt-4">
                         <button 
-                            type="submit" 
+                            type="button"
+                            onclick="confirmSubmit('add-assignment-form')"
                             class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
                         >
                             <i class="fas fa-check-circle"></i>
                             Create Assignment
                         </button>
+
                         <a 
                             href="{{ route('assignments.list') }}" 
                             class="flex-1 bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-semibold hover:bg-gray-300 transition duration-300 flex items-center justify-center gap-2"
@@ -235,6 +237,7 @@
         </main>
     </div>
 
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -263,6 +266,23 @@
             } else {
                 fileNameDisplay.textContent = '';
             }
+        }
+
+        function confirmSubmit(formId) {
+            Swal.fire({
+                title: 'Confirm submission?',
+                text: 'This assignment will be saved in the database.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#7c3aed', // purple
+                cancelButtonColor: '#6b7280',  // gray
+                confirmButtonText: 'Yes, submit',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById(formId).submit();
+                }
+            });
         }
     </script>
 </body>

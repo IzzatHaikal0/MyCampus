@@ -59,7 +59,7 @@
                     </h2>
                 </div>
 
-                <form action="{{ route('assignments.update', $assignment['id']) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+                <form id="edit-assignment-form" action="{{ route('assignments.update', $assignment['id']) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                     @csrf
                     @method('POST')
 
@@ -245,6 +245,7 @@
                     <div class="flex gap-4 pt-4">
                         <button 
                             type="submit" 
+                            onclick="confirmSubmit('edit-assignment-form')"
                             class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
                         >
                             <i class="fas fa-save"></i>
@@ -268,6 +269,7 @@
         </main>
     </div>
 
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -305,6 +307,23 @@
                 setTimeout(() => message.remove(), 500);
             }, 5000);
         });
+
+        function confirmSubmit(formId) {
+            Swal.fire({
+                title: 'Update submission?',
+                text: 'This updated data will be saved in the database.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#7c3aed', // purple
+                cancelButtonColor: '#6b7280',  // gray
+                confirmButtonText: 'Yes, submit',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById(formId).submit();
+                }
+            });
+        }
     </script>
 </body>
 </html>

@@ -105,18 +105,21 @@
                                             <i class="fas fa-edit"></i>
                                             Edit
                                         </a>
-                                        <form action="{{ route('assignments.delete', $assignment['id']) }}" 
-                                            method="POST" 
-                                            onsubmit="return confirm('Are you sure you want to delete this assignment?')"
+                                        <form id="delete-form-{{ $assignment['id'] }}"
+                                            action="{{ route('assignments.delete', $assignment['id']) }}"
+                                            method="POST"
                                             class="inline">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" 
+
+                                            <button type="button"
+                                                    onclick="confirmDeleteAssignment('delete-form-{{ $assignment['id'] }}')"
                                                     class="w-full px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium flex items-center gap-2">
                                                 <i class="fas fa-trash"></i>
                                                 Delete
                                             </button>
                                         </form>
+
                                         <a href="{{ route('submission-teacher.view', $assignment['id']) }}" 
                                         class="px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium flex items-center gap-2">
                                             <i class="fas fa-eye"></i>
@@ -141,8 +144,10 @@
             </footer>
         </main>
     </div>
-
+    
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
@@ -174,6 +179,23 @@
             setTimeout(() => message.remove(), 500);
         }, 5000);
     });
+
+    function confirmDeleteAssignment(formId) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'This assignment will be permanently deleted!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete it',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById(formId).submit();
+            }
+        });
+    }
 
     </script>
 </body>

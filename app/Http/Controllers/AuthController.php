@@ -14,7 +14,6 @@ class AuthController extends Controller
     protected $database;
 
     public function __construct()
-<<<<<<< HEAD
     {
         $credentialsPath = realpath(env('FIREBASE_CREDENTIALS'));
 
@@ -30,33 +29,6 @@ class AuthController extends Controller
         $this->database = $firebase->createDatabase();
     }
 
-=======
-{
-    // Get Firebase credentials path from .env
-    $credentialsPath = env('FIREBASE_CREDENTIALS');
-
-    // Convert backslashes to forward slashes for Windows compatibility
-    $credentialsPath = str_replace('\\', '/', $credentialsPath);
-
-    // Resolve absolute path
-    $credentialsPath = realpath($credentialsPath);
-
-    // Check if the file exists
-    if (!$credentialsPath || !file_exists($credentialsPath)) {
-        throw new \Exception("Firebase credentials not found at: {$credentialsPath}");
-    }
-
-    // Initialize Firebase
-    $firebase = (new \Kreait\Firebase\Factory)
-        ->withServiceAccount($credentialsPath)
-        ->withDatabaseUri(env('FIREBASE_DATABASE_URL'));
-
-    $this->auth = $firebase->createAuth();
-    $this->database = $firebase->createDatabase();
-}
-
-
->>>>>>> origin/ManageAssignment
     /**
      * Show the registration form.
      */
@@ -122,6 +94,148 @@ class AuthController extends Controller
         }
     }
 
+    public function profile()
+    {
+        // Get the current user from session
+        $sessionUser = Session::get('firebase_user');
+        
+        if (!$sessionUser) {
+            return redirect()->route('login')->withErrors(['general' => 'Please login first.']);
+        }
+        
+        $uid = $sessionUser['uid'];
+        
+        try {
+            // Get user data from Firebase
+            $userData = $this->database->getReference("users/{$uid}")->getValue();
+            
+            // Get Firebase Auth user data
+            $firebaseUser = $this->auth->getUser($uid);
+            
+            // Merge data
+            $user = [
+                'uid' => $uid,
+                'name' => $userData['name'] ?? $firebaseUser->displayName ?? '',
+                'email' => $userData['email'] ?? $firebaseUser->email,
+                'role' => $userData['role'] ?? 'student',
+                'class_section' => $userData['class_section'] ?? null,
+                'email_verified' => $firebaseUser->emailVerified,
+            ];
+            
+            return view('profile.profile', compact('user'));
+            
+        } catch (\Exception $e) {
+            return back()->withErrors(['general' => 'Failed to load profile: ' . $e->getMessage()]);
+        }
+    }
+    /**
+     * Update user profile.
+    */
+    public function updateProfile(Request $request)
+    {
+        // Get the current user from session
+        $sessionUser = Session::get('firebase_user');
+        
+        if (!$sessionUser) {
+            return redirect()->route('login')->withErrors(['general' => 'Please login first.']);
+        }
+        
+        $uid = $sessionUser['uid'];
+        
+        // Base validation rules
+        $rules = [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email',
+        ];
+        
+        // Add class_section validation only for students
+        if ($sessionUser['role'] === 'student') {
+            $rules['class_section'] = 'required|string';
+        }
+        
+        $request->validate($rules);
+        
+        try {
+            // Update Firebase Auth user
+            $properties = [
+                'displayName' => $request->name,
+                'email' => $request->email,
+            ];
+            
+            $this->auth->updateUser($uid, $properties);
+            
+            // Prepare database update
+            $updateData = [
+                'name' => $request->name,
+                'email' => $request->email,
+            ];
+            
+            // Add class_section only if user is a student
+            if ($sessionUser['role'] === 'student') {
+                $updateData['class_section'] = $request->class_section;
+            }
+            
+            // Update Firebase Realtime Database
+            $this->database->getReference("users/{$uid}")->update($updateData);
+            
+            // Update session data
+            Session::put('firebase_user', [
+                'uid' => $uid,
+                'email' => $request->email,
+                'name' => $request->name,
+                'role' => $sessionUser['role'],
+            ]);
+            
+            return back()->with('success', 'Profile updated successfully!');
+            
+        } catch (\Kreait\Firebase\Exception\Auth\EmailExists $e) {
+            return back()->withErrors(['email' => 'This email is already in use by another account.']);
+        } catch (\Exception $e) {
+            return back()->withErrors(['general' => 'Failed to update profile: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Update user password.
+     */
+    public function updatePassword(Request $request)
+    {
+        // Get the current user from session
+        $sessionUser = Session::get('firebase_user');
+        
+        if (!$sessionUser) {
+            return redirect()->route('login')->withErrors(['general' => 'Please login first.']);
+        }
+        
+        $uid = $sessionUser['uid'];
+        
+        $request->validate([
+            'current_password' => 'required|string|min:6',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+        
+        try {
+            // Verify current password by attempting to sign in
+            try {
+                $this->auth->signInWithEmailAndPassword(
+                    $sessionUser['email'],
+                    $request->current_password
+                );
+            } catch (InvalidPassword $e) {
+                return back()->withErrors(['current_password' => 'Current password is incorrect.']);
+            }
+            
+            // Update password in Firebase Auth
+            $this->auth->updateUser($uid, [
+                'password' => $request->password,
+            ]);
+            
+            return back()->with('success', 'Password updated successfully!');
+            
+        } catch (\Exception $e) {
+            return back()->withErrors(['general' => 'Failed to update password: ' . $e->getMessage()]);
+        }
+    }
     /**
      * Show the login form.
      */
