@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
 <!--TESTING UNTUK IMAN-->
->>>>>>> origin/ManageAssignment
 
 <!DOCTYPE html>
 <html lang="en">
