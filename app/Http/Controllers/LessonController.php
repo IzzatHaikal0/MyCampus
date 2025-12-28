@@ -586,25 +586,40 @@ public function markNotificationRead($notificationId)
     ========================================================= */
     public function checkOverlap(Request $request)
     {
+        // 1. Safety Check: If constructor failed, try to initialize here
+        if (!$this->database) {
+            $this->database = $this->firebaseDatabase();
+        }
+
         $date = $request->date;
         $newStart = strtotime($request->start_time);
         $newEnd = strtotime($request->end_time);
 
-        $lessonsRef = $this->database->getReference('lessons')->getValue() ?? [];
-        $overlap = false;
+        try {
+            // 2. Fetch data from Firebase
+            $lessonsRef = $this->database->getReference('lessons')->getValue() ?? [];
+            $overlap = false;
 
-        foreach ($lessonsRef as $lesson) {
-            if (($lesson['date'] ?? null) === $date) {
-                $existingStart = strtotime($lesson['start_time']);
-                $existingEnd = strtotime($lesson['end_time']);
-                if (($newStart < $existingEnd) && ($newEnd > $existingStart)) {
-                    $overlap = true;
-                    break;
+            foreach ($lessonsRef as $lesson) {
+                // Check if it's the same day and not a cancelled lesson
+                if (($lesson['date'] ?? null) === $date && empty($lesson['cancelled'])) {
+                    $existingStart = strtotime($lesson['start_time']);
+                    $existingEnd = strtotime($lesson['end_time']);
+                    
+                    // Overlap Logic: (StartA < EndB) and (EndA > StartB)
+                    if (($newStart < $existingEnd) && ($newEnd > $existingStart)) {
+                        $overlap = true;
+                        break;
+                    }
                 }
             }
-        }
 
-        return response()->json(['overlap' => $overlap]);
+            return response()->json(['overlap' => $overlap]);
+
+        } catch (\Exception $e) {
+            // If this returns an error, your JS 'catch' block will trigger the alert
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     /* =========================================================
