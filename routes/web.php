@@ -6,7 +6,9 @@ use App\Http\Controllers\LessonController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\GradeController;
-<<<<<<< HEAD
+use App\Http\Controllers\StudyGroupController;
+
+
 
 
 /*
@@ -77,7 +79,6 @@ Route::post('/assignments/grade-submission/edit/{id}', [GradeController::class, 
 */
 Route::get('/admin/dashboard', fn() => view('admin.dashboard'))->name('admin.dashboard');
 
-=======
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\SessionMiddleware;
 /*
@@ -209,4 +210,18 @@ Route::post('/assignments/edit-grade/{id}', [GradeController::class, 'editGradin
     ->name('submissions.editGrading');
         Route::get('/fix-lessons', [LessonController::class, 'autoFixLessonRepeats']);
     });
->>>>>>> origin/ManageAssignment
+Route::middleware(['role:student'])->group(function() {
+
+    Route::get('/study-groups', [StudyGroupController::class, 'index'])
+        ->name('study-groups.index');
+
+    Route::post('/study-groups', [StudyGroupController::class, 'store'])
+        ->name('study-groups.store');
+
+    Route::get('/study-groups/{id}', [StudyGroupController::class, 'show'])
+        ->name('study-groups.show');
+
+    Route::post('/study-groups/{id}/message', [StudyGroupController::class, 'sendMessage'])
+        ->name('study-groups.message');
+
+});
