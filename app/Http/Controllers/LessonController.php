@@ -53,10 +53,15 @@ class LessonController extends Controller
     ========================================================= */
     public function store(Request $request)
     {
-        // Validation
+        // 1. Initialize Database if it hasn't been done yet
+        if (!$this->database) {
+            $this->database = $this->firebaseDatabase();
+        }
+
+        // 2. Validation
         $request->validate([
             'subject_name' => 'required|string|max:255',
-            'class_section' => 'required|string|max:255', // updated
+            'class_section' => 'required|string|max:255',
             'date' => 'required|date',
             'start_time' => 'required',
             'end_time' => 'required|after:start_time',
@@ -67,7 +72,7 @@ class LessonController extends Controller
             $newStart = strtotime($request->start_time);
             $newEnd = strtotime($request->end_time);
 
-            // Get existing lessons
+            // 3. Fetch lessons from Firebase
             $lessonsRef = $this->database->getReference("lessons")->getValue() ?? [];
             $existingLessons = [];
 
@@ -77,7 +82,7 @@ class LessonController extends Controller
                 }
             }
 
-            // Check overlap
+            // 4. Check for Overlaps
             foreach ($existingLessons as $lesson) {
                 $existingStart = strtotime($lesson['start_time']);
                 $existingEnd = strtotime($lesson['end_time']);
@@ -86,11 +91,11 @@ class LessonController extends Controller
                 }
             }
 
-            // Store lesson
-            $lessonRef = $this->database->getReference('lessons')->push();
-            $lessonRef->set([
+            // 5. Store the data in Firebase
+            $newLessonRef = $this->database->getReference('lessons')->push();
+            $newLessonRef->set([
                 'subject_name' => $request->subject_name,
-                'class_section' => $request->class_section, // always use class_section
+                'class_section' => $request->class_section,
                 'date' => $request->date,
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time,
@@ -103,6 +108,7 @@ class LessonController extends Controller
 
             return redirect()->route('lessons.add')->with('success', 'Lesson added successfully.');
         } catch (\Exception $e) {
+            // This will now show the REAL error if it fails (likely a path error)
             return back()->with('error', 'Failed to add lesson: ' . $e->getMessage());
         }
     }
