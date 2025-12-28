@@ -22,15 +22,19 @@ WORKDIR /var/www
 # Copy app files
 COPY . .
 
-# Copy built frontend from Stage 1
-COPY --from=frontend /app/public/dist ./public/dist
+# FIX: Vite builds to public/build, NOT public/dist
+COPY --from=frontend /app/public/build ./public/build
 
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Laravel setup
-RUN php artisan config:clear && \
+# Laravel setup - FIX: Remove space in storage:link
+RUN php artisan storage:link && \
+    php artisan config:clear && \
     php artisan route:clear && \
     php artisan view:clear
+
+# Recommended: Fix permissions so Render can write to storage
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
 CMD ["php-fpm"]

@@ -53,6 +53,38 @@
             
             <!-- Bottom Content Grid -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<<<<<<< HEAD
+                <!-- Today's Classes -->
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                        <i class="fas fa-calendar-day text-purple-600"></i>
+                        Today's Classes
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="bg-purple-50 border-l-4 border-purple-600 rounded-lg p-4 flex justify-between items-center hover:shadow-md transition">
+                            <div>
+                                <div class="font-semibold text-gray-800">Mathematics 101</div>
+                                <div class="text-sm text-gray-500">Room 204</div>
+                            </div>
+                            <div class="text-purple-600 font-semibold">09:00 AM</div>
+                        </div>
+                        <div class="bg-purple-50 border-l-4 border-purple-600 rounded-lg p-4 flex justify-between items-center hover:shadow-md transition">
+                            <div>
+                                <div class="font-semibold text-gray-800">Physics Advanced</div>
+                                <div class="text-sm text-gray-500">Lab 3</div>
+                            </div>
+                            <div class="text-purple-600 font-semibold">11:00 AM</div>
+                        </div>
+                        <div class="bg-purple-50 border-l-4 border-purple-600 rounded-lg p-4 flex justify-between items-center hover:shadow-md transition">
+                            <div>
+                                <div class="font-semibold text-gray-800">Chemistry Basics</div>
+                                <div class="text-sm text-gray-500">Room 105</div>
+                            </div>
+                            <div class="text-purple-600 font-semibold">02:00 PM</div>
+                        </div>
+                    </div>
+                </div>
+=======
              <!-- Today's Classes -->
 <div class="bg-white rounded-2xl shadow-lg p-6">
     <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
@@ -97,6 +129,7 @@
 
     </div>
 </div>
+>>>>>>> origin/ManageAssignment
 
                 <!-- Students in Class Today -->
                 <div class="bg-white rounded-2xl shadow-lg p-6">

@@ -14,6 +14,23 @@ class AuthController extends Controller
     protected $database;
 
     public function __construct()
+<<<<<<< HEAD
+    {
+        $credentialsPath = realpath(env('FIREBASE_CREDENTIALS'));
+
+        if (!$credentialsPath || !file_exists($credentialsPath)) {
+            throw new \Exception("Firebase credentials not found at: {$credentialsPath}");
+        }
+
+        $firebase = (new Factory)
+            ->withServiceAccount($credentialsPath)
+            ->withDatabaseUri(env('FIREBASE_DATABASE_URL'));
+
+        $this->auth = $firebase->createAuth();
+        $this->database = $firebase->createDatabase();
+    }
+
+=======
 {
     // Get Firebase credentials path from .env
     $credentialsPath = env('FIREBASE_CREDENTIALS');
@@ -39,6 +56,7 @@ class AuthController extends Controller
 }
 
 
+>>>>>>> origin/ManageAssignment
     /**
      * Show the registration form.
      */
