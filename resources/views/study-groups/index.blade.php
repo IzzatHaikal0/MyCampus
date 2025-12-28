@@ -51,12 +51,11 @@
         </div>
 
         <!-- Group Cards -->
-        @if($groups->count())
+        @if(count($groups))
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            @foreach($groups as $group)
+            @foreach($groups as $id => $group)
             <div
-                onclick="window.location='{{ route('study-groups.chat',$group->id) }}'"
+                onclick="window.location='{{ route('study-groups.chat', $id) }}'"
                 class="bg-white p-5 rounded-xl shadow-md hover:shadow-lg transition cursor-pointer relative">
 
                 <div class="flex justify-between items-start">
@@ -64,17 +63,17 @@
                     <!-- Group Info -->
                     <div>
                         <h2 class="text-xl font-semibold text-purple-700">
-                            {{ $group->name }}
+                            {{ $group['name'] ?? '' }}
                         </h2>
-                        <p class="text-gray-600">{{ $group->subject }}</p>
+                        <p class="text-gray-600">{{ $group['subject'] ?? '' }}</p>
                         <p class="text-sm text-gray-500 mt-2 line-clamp-2">
-                            {{ $group->description }}
+                            {{ $group['description'] ?? '' }}
                         </p>
                     </div>
 
                     <!-- More Info -->
                     <button type="button"
-                        onclick="event.stopPropagation(); openModal({{ $group->id }})"
+                        onclick="event.stopPropagation(); openModal('{{ $id }}')"
                         class="bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600">
                         More Info
                     </button>
@@ -83,28 +82,25 @@
 
                 <!-- Edit / Delete -->
                 <div class="absolute bottom-3 right-3 flex gap-2">
-                    <a href="{{ route('study-groups.edit',$group->id) }}"
+                    <a href="{{ route('study-groups.edit', $id) }}"
                        onclick="event.stopPropagation()"
                        class="bg-yellow-400 text-white px-3 py-1 rounded text-sm">
                         Edit
                     </a>
 
-                    <form action="{{ route('study-groups.destroy', $group->id) }}" method="POST" 
-      onsubmit="event.stopPropagation(); return confirm('Delete this group?')">
-    @csrf
-    @method('DELETE')
-    <button type="submit" onclick="event.stopPropagation()"
-            class="bg-red-500 text-white px-3 py-1 rounded text-sm">
-        Delete
-    </button>
-</form>
-
-
+                    <form action="{{ route('study-groups.destroy', $id) }}" method="POST" 
+                          onsubmit="event.stopPropagation(); return confirm('Delete this group?')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" onclick="event.stopPropagation()"
+                                class="bg-red-500 text-white px-3 py-1 rounded text-sm">
+                            Delete
+                        </button>
+                    </form>
                 </div>
 
             </div>
             @endforeach
-
         </div>
         @else
             <p class="text-white">No study groups yet.</p>
@@ -118,7 +114,6 @@
      class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
 
     <div class="bg-white rounded-2xl p-6 w-96 relative">
-
         <button onclick="closeModal()"
                 class="absolute top-2 right-2 text-xl">&times;</button>
 
@@ -133,10 +128,10 @@
 const groups = @json($groups);
 
 function openModal(id){
-    const g = groups.find(x => x.id === id);
+    const g = groups[id];
     if(!g) return;
 
-    document.getElementById('modalName').textContent = g.name;
+    document.getElementById('modalName').textContent = g.name ?? '-';
     document.getElementById('modalLeader').textContent = "Leader: " + (g.owner_name ?? '-');
     document.getElementById('modalCode').textContent = "Join Code: " + (g.join_code ?? '-');
     document.getElementById('modalDescription').textContent = g.description ?? '-';

@@ -3,13 +3,21 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use App\Models\StudyGroup;
-use App\Models\ChatMessage;
+use Kreait\Firebase\Factory;
 
 class StudyGroupController extends Controller
 {
+    protected $db;
+
+    public function __construct()
+    {
+        $factory = (new Factory)
+            ->withServiceAccount(env('FIREBASE_CREDENTIALS'))
+            ->withDatabaseUri(env('FIREBASE_DATABASE_URL'));
+
+        $this->db = $factory->createDatabase();
+    }
+
     /* ===============================
        LIST GROUP (OWNER + JOINED)
     =============================== */
@@ -17,13 +25,15 @@ class StudyGroupController extends Controller
     {
         $userId = session('firebase_user.uid');
 
-        $groups = StudyGroup::where('owner_uid', $userId)
-            ->orWhereIn('id', function ($q) use ($userId) {
-                $q->select('group_id')
-                  ->from('study_group_user')
-                  ->where('user_id', $userId);
-            })
-            ->get();
+        $allGroups = $this->db->getReference('study-groups')->getValue() ?? [];
+
+        $groups = [];
+        foreach ($allGroups as $id => $group) {
+            if (($group['owner_uid'] ?? null) === $userId ||
+                isset($group['members']) && array_key_exists($userId, $group['members'])) {
+                $groups[$id] = $group;
+            }
+        }
 
         return view('study-groups.index', compact('groups'));
     }
@@ -47,14 +57,18 @@ class StudyGroupController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        StudyGroup::create([
-            'name'        => $request->name,
-            'subject'     => $request->subject,
+        $groupData = [
+            'name' => $request->name,
+            'subject' => $request->subject,
             'description' => $request->description,
-            'owner_uid'   => session('firebase_user.uid'),
-            'owner_name'  => session('firebase_user.name'),
-            'join_code'   => strtoupper(substr(md5(time()), 0, 6)),
-        ]);
+            'owner_uid' => session('firebase_user.uid'),
+            'owner_name' => session('firebase_user.name'),
+            'join_code' => strtoupper(substr(md5(time()), 0, 6)),
+            'created_at' => now()->toDateTimeString(),
+            'members' => []
+        ];
+
+        $this->db->getReference('study-groups')->push($groupData);
 
         return redirect()->route('study-groups.index')->with('success', 'Group created successfully!');
     }
@@ -64,99 +78,97 @@ class StudyGroupController extends Controller
     =============================== */
     public function joinByCode(Request $request)
     {
-        $request->validate([
-            'code' => 'required'
-        ]);
+        $request->validate(['code' => 'required']);
 
-        $group = StudyGroup::where('join_code', $request->code)->first();
+        $allGroups = $this->db->getReference('study-groups')->getValue() ?? [];
 
-        if (!$group) {
+        $foundId = null;
+        foreach ($allGroups as $id => $group) {
+            if (($group['join_code'] ?? null) === $request->code) {
+                $foundId = $id;
+                break;
+            }
+        }
+
+        if (!$foundId) {
             return back()->with('error', 'Invalid join code');
         }
 
-        DB::table('study_group_user')->updateOrInsert(
-            [
-                'group_id' => $group->id,
-                'user_id'  => session('firebase_user.uid'),
-            ],
-            [
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
+        $userId = session('firebase_user.uid');
+        $this->db->getReference("study-groups/{$foundId}/members/{$userId}")
+            ->set([
+                'name' => session('firebase_user.name'),
+                'joined_at' => now()->toDateTimeString()
+            ]);
 
-        return redirect()->route('study-groups.chat', $group->id);
+        return redirect()->route('study-groups.chat', $foundId);
     }
 
     /* ===============================
        GROUP CHAT PAGE
     =============================== */
-   public function chat(StudyGroup $study_group)
-{
-    $study_group->load('messages');
-
-    $group = $study_group;
-
-    return view('study-groups.chat', compact('group'));
-}
-
-
-    /* ===============================
-       SEND MESSAGE (TEXT + FILE)
-    =============================== */
-    public function sendMessage(Request $request, StudyGroup $study_group)
+    public function chat($groupId)
     {
-        $request->validate([
-            'message' => 'nullable|string',
-            'file' => 'nullable|file|max:10240', // max 10MB
-        ]);
+        $group = $this->db->getReference("study-groups/{$groupId}")->getValue();
+        $messages = $this->db->getReference("study-groups/{$groupId}/messages")->getValue() ?? [];
+        
+        if($messages){
+            $messages = collect($messages)->sortBy('created_at')->toArray();
+        }
+
+        return view('study-groups.chat', compact('group', 'messages', 'groupId'));
+    }
+    /* ===============================
+       SEND MESSAGE
+    =============================== */
+     public function sendMessage(Request $request, $groupId)
+    {
+        // Kalau tak ada mesej dan tak ada file, return error
+        if(!$request->filled('message') && !$request->hasFile('file')){
+            return response()->json(['error' => 'Please provide a message or file.'], 422);
+        }
 
         $filePath = null;
-        if ($request->hasFile('file')) {
+        if($request->hasFile('file')){
             $filePath = $request->file('file')->store('chat_files', 'public');
         }
 
-        ChatMessage::create([
-            'study_group_id' => $study_group->id,
-            'firebase_uid' => session('firebase_user.uid'),
-            'sender_name' => session('firebase_user.name'),
-            'message' => $request->message,
+        $newMessage = [
+            'user_id' => session('firebase_user.uid'),
+            'user_name' => session('firebase_user.name'),
+            'message' => $request->message ?? '',
             'file_path' => $filePath,
-        ]);
+            'created_at' => now()->toDateTimeString(),
+        ];
 
-        return back();
+        $this->db->getReference("study-groups/{$groupId}/messages")->push($newMessage);
+
+        return response()->json($newMessage);
     }
+
 
     /* ===============================
        DELETE GROUP
     =============================== */
-    public function destroy(StudyGroup $study_group)
-{
-    // Delete semua chat messages
-    ChatMessage::where('study_group_id', $study_group->id)->delete();
-
-    // Delete semua pivot entries
-    DB::table('study_group_user')->where('group_id', $study_group->id)->delete();
-
-    // Delete group sendiri
-    $study_group->delete();
-
-    return redirect()->route('study-groups.index')->with('success', 'Group deleted successfully!');
-}
-
+    public function destroy($groupId)
+    {
+        $this->db->getReference("study-groups/{$groupId}")->remove();
+        return redirect()->route('study-groups.index')->with('success', 'Group deleted successfully!');
+    }
 
     /* ===============================
        EDIT GROUP
     =============================== */
-    public function edit(StudyGroup $study_group)
+    public function edit($groupId)
     {
-        return view('study-groups.edit', ['study_group' => $study_group]);
+        $group = $this->db->getReference("study-groups/{$groupId}")->getValue();
+        return view('study-groups.edit', compact('group', 'groupId'));
     }
 
     /* ===============================
        UPDATE GROUP
     =============================== */
-    public function update(Request $request, StudyGroup $study_group)
+    public function update(Request $request, $groupId)
     {
         $request->validate([
             'name' => 'required|string|max:255',
@@ -164,7 +176,7 @@ class StudyGroupController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        $study_group->update([
+        $this->db->getReference("study-groups/{$groupId}")->update([
             'name' => $request->name,
             'subject' => $request->subject,
             'description' => $request->description,

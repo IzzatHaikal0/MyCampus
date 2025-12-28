@@ -27,7 +27,7 @@
             </div>
 
             <div class="flex items-center gap-3">
-                <img src="https://ui-avatars.com/api/?name={{ urlencode(session('firebase_user.name','User')) }}"
+                <img src="https://ui-avatars.com/api/?name={{ urlencode(session('firebase_user.name','User')) }}&background=667eea&color=fff"
                      class="w-10 h-10 rounded-full">
                 <span class="font-semibold">{{ session('firebase_user.name','User') }}</span>
             </div>

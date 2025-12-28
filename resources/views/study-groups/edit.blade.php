@@ -4,86 +4,106 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Edit Study Group</title>
+
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body class="bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 min-h-screen">
 
 <div class="flex">
-    <!-- Sidebar -->
+
+    <!-- Sidebar (SAMA) -->
     @include('layouts.sidebar')
 
-    <!-- Main content -->
+    <!-- Main Content (SAMA) -->
     <main class="flex-1 ml-72 p-6">
 
-        <!-- Top Header -->
+        <!-- Header (SAMA STYLE) -->
         <div class="bg-white rounded-2xl shadow-lg p-6 mb-6 flex justify-between items-center">
-            <!-- Breadcrumb / Page Info -->
             <div class="flex items-center gap-3 text-gray-600">
-                <i class="fas fa-home"></i>
+                <i class="fas fa-users"></i>
                 <span class="font-medium"> > Edit Study Group</span>
             </div>
 
-            <!-- Notifications + User -->
-            <div class="flex items-center gap-6">
-                <button class="relative text-gray-600 hover:text-purple-600 transition">
-                    <i class="fas fa-bell text-xl"></i>
-                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">3</span>
-                </button>
-
-                <div class="flex items-center gap-3 cursor-pointer hover:bg-gray-50 rounded-xl p-2 transition">
-                    <img src="https://ui-avatars.com/api/?name={{ urlencode(session('firebase_user.name', 'User')) }}&background=667eea&color=fff" 
-                         alt="User" class="w-10 h-10 rounded-full">
-                    <span class="font-semibold text-gray-800">{{ session('firebase_user.name', 'User') }}</span>
-                    <i class="fas fa-chevron-down text-gray-400 text-sm"></i>
-                </div>
+            <div class="flex items-center gap-3">
+                <img src="https://ui-avatars.com/api/?name={{ urlencode(session('firebase_user.name','User')) }}"
+                     class="w-10 h-10 rounded-full">
+                <span class="font-semibold">
+                    {{ session('firebase_user.name','User') }}
+                </span>
             </div>
         </div>
 
-        <!-- Edit Form Card -->
-        <div class="bg-white p-8 rounded-2xl shadow-xl max-w-lg mx-auto">
-            <h1 class="text-2xl font-bold mb-6 text-purple-700 text-center">Edit Study Group</h1>
+        <!-- CONTENT CARD (SAMA MACAM PAGE LAIN) -->
+        <div class="bg-white p-8 rounded-2xl shadow-xl max-w-xl mx-auto">
 
-            <form action="{{ route('study-groups.update', $study_group->id) }}" method="POST" class="space-y-5">
+            <!-- ERROR -->
+            @if ($errors->any())
+                <div class="mb-4 bg-red-100 text-red-700 p-4 rounded">
+                    <ul class="list-disc list-inside">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <!-- FORM -->
+            <form action="{{ route('study-groups.update', $groupId) }}"
+                  method="POST"
+                  class="space-y-5">
+
                 @csrf
                 @method('PUT')
 
+                <!-- Group Name -->
                 <div>
-                    <label class="block mb-2 font-medium text-gray-700">Group Name</label>
-                    <input type="text" name="name" value="{{ old('name', $study_group->name) }}"
+                    <label class="block mb-2 font-medium text-gray-700">
+                        Group Name
+                    </label>
+                    <input type="text"
+                           name="name"
+                           value="{{ old('name', $group['name'] ?? '') }}"
+                           required
                            class="border p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                    @error('name')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
                 </div>
 
+                <!-- Subject -->
                 <div>
-                    <label class="block mb-2 font-medium text-gray-700">Subject</label>
-                    <input type="text" name="subject" value="{{ old('subject', $study_group->subject) }}"
+                    <label class="block mb-2 font-medium text-gray-700">
+                        Subject
+                    </label>
+                    <input type="text"
+                           name="subject"
+                           value="{{ old('subject', $group['subject'] ?? '') }}"
                            class="border p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                    @error('subject')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
                 </div>
 
+                <!-- Description -->
                 <div>
-                    <label class="block mb-2 font-medium text-gray-700">Description</label>
-                    <textarea name="description" rows="4"
-                              class="border p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">{{ old('description', $study_group->description) }}</textarea>
-                    @error('description')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
+                    <label class="block mb-2 font-medium text-gray-700">
+                        Description
+                    </label>
+                    <textarea name="description"
+                              rows="4"
+                              class="border p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">{{ old('description', $group['description'] ?? '') }}</textarea>
                 </div>
 
-                <button type="submit"
-                        class="w-full bg-purple-500 text-white py-3 rounded-lg hover:bg-purple-600 transition font-semibold">
-                    Update Group
-                </button>
+                <!-- BUTTONS -->
+                <div class="flex justify-between items-center pt-4">
+                    <a href="{{ route('study-groups.index') }}"
+                       class="text-gray-600 hover:underline">
+                        ← Back
+                    </a>
 
-                <a href="{{ route('study-groups.index') }}" 
-                   class="block mt-4 text-center text-purple-700 hover:underline">
-                   ← Back to My Study Groups
-                </a>
+                    <button type="submit"
+                            class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition">
+                        Update Group
+                    </button>
+                </div>
+
             </form>
         </div>
 

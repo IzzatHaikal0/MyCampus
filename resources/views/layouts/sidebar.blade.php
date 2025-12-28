@@ -112,12 +112,11 @@
                     </a>
                 </li>
                 
-                <li>
-    <a href="{{ route('studygroups.index') }}" class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl transition">
-        <i class="fas fa-users text-lg w-5"></i>
-        <span class="sidebar-text">Study Groups</span>
-    </a>
-</li>
+               <a href="{{ route('study-groups.index') }}" class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl transition">
+    <i class="fas fa-users text-lg w-5"></i>
+    <span class="sidebar-text">Study Groups</span>
+</a>
+
 
 
             @endif

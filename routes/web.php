@@ -220,33 +220,32 @@ Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
            
     });
 // STUDENT ONLY - STUDY GROUP ROUTES
-Route::middleware(['role:student', SessionMiddleware::class, 'auth'])->group(function() {
+Route::middleware([SessionMiddleware::class, 'role:student'])->group(function () {
 
-    // List all groups student joined
     Route::get('/study-groups', [StudyGroupController::class, 'index'])
         ->name('study-groups.index');
 
-    // Create / join a group
+    Route::get('/study-groups/create', [StudyGroupController::class, 'create'])
+        ->name('study-groups.create');
+
     Route::post('/study-groups', [StudyGroupController::class, 'store'])
         ->name('study-groups.store');
 
-    // Show group details
-    Route::get('/study-groups/{id}', [StudyGroupController::class, 'show'])
-        ->name('study-groups.show');
+    Route::post('/study-groups/join', [StudyGroupController::class, 'joinByCode'])
+        ->name('study-groups.joinByCode');
 
-    // Send message in group chat
-    Route::post('/study-groups/{id}/message', [StudyGroupController::class, 'sendMessage'])
+    Route::get('/study-groups/{groupId}/chat', [StudyGroupController::class, 'chat'])
+        ->name('study-groups.chat');
+
+    Route::post('/study-groups/{groupId}/message', [StudyGroupController::class, 'sendMessage'])
         ->name('study-groups.message');
 
-    // Optional: join a group (if separate from store)
-    Route::post('/study-groups/{id}/join', [StudyGroupController::class, 'join'])
-        ->name('study-groups.join');
+    Route::get('/study-groups/{groupId}/edit', [StudyGroupController::class, 'edit'])
+        ->name('study-groups.edit');
 
-    // Optional: leave a group
-    Route::post('/study-groups/{id}/leave', [StudyGroupController::class, 'leave'])
-        ->name('study-groups.leave');
+    Route::put('/study-groups/{groupId}', [StudyGroupController::class, 'update'])
+        ->name('study-groups.update');
 
-    // Optional: upload file to group
-    Route::post('/study-groups/{id}/upload', [StudyGroupController::class, 'uploadFile'])
-        ->name('study-groups.upload');
+    Route::delete('/study-groups/{groupId}', [StudyGroupController::class, 'destroy'])
+        ->name('study-groups.destroy');
 });
