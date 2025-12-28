@@ -15,3 +15,151 @@ header {
     background: #f4f4f4;
     padding: 1rem;
 }
+
+.chat-fab {
+    position: fixed;
+    right: 30px;
+    bottom: 30px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #25d366;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 10px 30px rgba(0,0,0,.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.chat-fab img {
+    width: 36px;
+    height: 36px;
+}
+
+.chat-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: red;
+    color: white;
+    font-size: 12px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-hub {
+    position: fixed;
+    right: 30px;
+    bottom: 110px;
+    width: 420px;
+    height: 50vh;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.2);
+    display: flex;
+    flex-direction: column;
+}
+
+.hidden {
+    display: none;
+}
+
+.chat-hub-header {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+}
+
+.class-item {
+    padding: 15px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+}
+
+.class-item:hover {
+    background: #f3f3f3;
+}
+
+.class-chat {
+    position: fixed;
+    right: 30px;
+    bottom: 110px;
+    width: 420px;
+    height: 60vh;
+    background: white;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-header {
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #eee;
+}
+
+.chat-messages {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+}
+
+.msg {
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    border-radius: 10px;
+    max-width: 70%;
+}
+
+.teacher {
+    background: #e0e7ff;
+}
+
+.student {
+    background: #dcf8c6;
+    margin-left: auto;
+}
+
+.chat-input {
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 8px;
+}
+
+.announcement-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.announcement-form {
+    width: 80%;
+    height: 80%;
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.announcement-form textarea {
+    flex: 1;
+    resize: none;
+}
