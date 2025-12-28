@@ -162,6 +162,10 @@
                 <i class="fas fa-sign-out-alt text-lg w-5"></i>
                 <span class="sidebar-text">Logout</span>
              </a>
+             <a href="/profile" class="flex items-center gap-4 px-4 py-3 text-blue-600 hover:bg-blue-50 rounded-xl transition">
+                <i class="fas fa-user text-lg w-5"></i>
+                <span class="sidebar-text">Profile</span>
+             </a>
         </div>
     </nav>
 </aside>

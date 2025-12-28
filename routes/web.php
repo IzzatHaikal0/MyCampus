@@ -122,18 +122,27 @@ Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
             Route::post('/notifications/mark-read/{id}', [LessonController::class, 'markNotificationRead'])->name('notifications.markRead');
         });
 
-Route::get('/fix-lessons', [LessonController::class, 'autoFixLessonRepeats']);
-
-// Student views grades
-Route::get('/student/grades', [GradeController::class, 'viewGrade'])
-    ->name('assignments.viewGrade');
-
-// Teacher adds grading
-Route::post('/assignments/grade-submission/{id}', [GradeController::class, 'addGrading'])
-    ->name('submissions.addGrading');
-
-// Teacher edits grading
-Route::post('/assignments/edit-grade/{id}', [GradeController::class, 'editGrading'])
-    ->name('submissions.editGrading');
         Route::get('/fix-lessons', [LessonController::class, 'autoFixLessonRepeats']);
+
+        // Student views grades
+        Route::get('/student/grades', [GradeController::class, 'viewGrade'])
+            ->name('assignments.viewGrade');
+
+        // Teacher adds grading
+        Route::post('/assignments/grade-submission/{id}', [GradeController::class, 'addGrading'])
+            ->name('submissions.addGrading');
+
+        // Teacher edits grading
+        Route::post('/assignments/edit-grade/{id}', [GradeController::class, 'editGrading'])
+            ->name('submissions.editGrading');
+                Route::get('/fix-lessons', [LessonController::class, 'autoFixLessonRepeats']);
+   
+        
+        // Profile routes
+           
+        Route::get('/profile', [AuthController::class, 'profile'])->name('profile.edit');
+        Route::patch('/profile', [AuthController::class, 'updateProfile'])->name('profile.update');
+        Route::post('/profile/password', [AuthController::class, 'updatePassword'])->name('profile.password.update');
+        Route::delete('/profile', [AuthController::class, 'deleteAccount'])->name('profile.destroy');
+           
     });
