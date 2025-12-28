@@ -40,4 +40,5 @@ RUN php artisan config:clear && \
 # Fix permissions for Render
 RUN chown -R www-data:www-data storage bootstrap/cache
 
-CMD ["php-fpm"]
+# Change the last line from CMD ["php-fpm"] to:
+CMD php artisan serve --host=0.0.0.0 --port=10000
