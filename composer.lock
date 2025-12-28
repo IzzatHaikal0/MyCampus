@@ -6,6 +6,7 @@
     ],
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     "content-hash": "d4b684534ff43493c0b9cad48fc72d41",
 =======
     "content-hash": "1b0cfdfc2d0d8c704d8445d5409389ed",
@@ -13,6 +14,9 @@
 =======
     "content-hash": "1b0cfdfc2d0d8c704d8445d5409389ed",
 >>>>>>> studygroup
+=======
+    "content-hash": "d4b684534ff43493c0b9cad48fc72d41",
+>>>>>>> origin/ManageAssignment
     "packages": [
         {
             "name": "beste/clock",

@@ -14,6 +14,7 @@ class AuthController extends Controller
     protected $database;
 
     public function __construct()
+<<<<<<< HEAD
     {
         $credentialsPath = realpath(env('FIREBASE_CREDENTIALS'));
 
@@ -29,6 +30,33 @@ class AuthController extends Controller
         $this->database = $firebase->createDatabase();
     }
 
+=======
+{
+    // Get Firebase credentials path from .env
+    $credentialsPath = env('FIREBASE_CREDENTIALS');
+
+    // Convert backslashes to forward slashes for Windows compatibility
+    $credentialsPath = str_replace('\\', '/', $credentialsPath);
+
+    // Resolve absolute path
+    $credentialsPath = realpath($credentialsPath);
+
+    // Check if the file exists
+    if (!$credentialsPath || !file_exists($credentialsPath)) {
+        throw new \Exception("Firebase credentials not found at: {$credentialsPath}");
+    }
+
+    // Initialize Firebase
+    $firebase = (new \Kreait\Firebase\Factory)
+        ->withServiceAccount($credentialsPath)
+        ->withDatabaseUri(env('FIREBASE_DATABASE_URL'));
+
+    $this->auth = $firebase->createAuth();
+    $this->database = $firebase->createDatabase();
+}
+
+
+>>>>>>> origin/ManageAssignment
     /**
      * Show the registration form.
      */
