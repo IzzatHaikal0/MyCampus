@@ -27,12 +27,13 @@ class LessonController extends Controller
         $this->database = $firebase->createDatabase();
     }
 
-    protected function firebaseDatabase()
+   protected function firebaseDatabase()
     {
+        // This will pull the path from your .env (local) or Render Environment (production)
+        $credentialsPath = env('FIREBASE_CREDENTIALS');
+
         $factory = (new Factory)
-            ->withServiceAccount(
-                storage_path('app/mycampus-f7b98-firebase-adminsdk-fbsvc-bdfda013a7.json')
-            )
+            ->withServiceAccount($credentialsPath)
             ->withDatabaseUri(env('FIREBASE_DATABASE_URL'));
 
         return $factory->createDatabase();

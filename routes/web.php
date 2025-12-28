@@ -6,6 +6,7 @@ use App\Http\Controllers\LessonController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\StudyGroupController;
+use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\SessionMiddleware;
 use Illuminate\Support\Facades\Route;
 
@@ -93,4 +94,35 @@ Route::middleware([SessionMiddleware::class])->group(function() {
     Route::patch('/profile', [AuthController::class, 'updateProfile'])->name('profile.update');
     Route::post('/profile/password', [AuthController::class, 'updatePassword'])->name('profile.password.update');
     Route::delete('/profile', [AuthController::class, 'deleteAccount'])->name('profile.destroy');
+});
+// STUDENT ONLY - STUDY GROUP ROUTES
+Route::middleware(['role:student'])->group(function() {
+
+    // List all groups student joined
+    Route::get('/study-groups', [StudyGroupController::class, 'index'])
+        ->name('study-groups.index');
+
+    // Create / join a group
+    Route::post('/study-groups', [StudyGroupController::class, 'store'])
+        ->name('study-groups.store');
+
+    // Show group details
+    Route::get('/study-groups/{id}', [StudyGroupController::class, 'show'])
+        ->name('study-groups.show');
+
+    // Send message in group chat
+    Route::post('/study-groups/{id}/message', [StudyGroupController::class, 'sendMessage'])
+        ->name('study-groups.message');
+
+    // Optional: join a group (if separate from store)
+    Route::post('/study-groups/{id}/join', [StudyGroupController::class, 'join'])
+        ->name('study-groups.join');
+
+    // Optional: leave a group
+    Route::post('/study-groups/{id}/leave', [StudyGroupController::class, 'leave'])
+        ->name('study-groups.leave');
+
+    // Optional: upload file to group
+    Route::post('/study-groups/{id}/upload', [StudyGroupController::class, 'uploadFile'])
+        ->name('study-groups.upload');
 });
