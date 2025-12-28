@@ -159,7 +159,7 @@
         }
 
         try {
-            const response = await fetch('{{ route("lessons.check-overlap") }}', {
+            const response = await fetch('/lessons/check-overlap', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
