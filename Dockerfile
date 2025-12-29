@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2 - Backend
-FROM php:8.2-fpm AS backend
+FROM php:8.4-fpm AS backend
 
 # Install system dependencies + gRPC requirements
 RUN apt-get update && apt-get install -y \
