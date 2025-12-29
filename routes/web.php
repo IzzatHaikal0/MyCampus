@@ -6,6 +6,7 @@ use App\Http\Controllers\LessonController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\GradeController;
+use App\Http\Controllers\CommunicationHubController;
 
 /*
 |--------------------------------------------------------------------------
@@ -68,6 +69,21 @@ Route::get('/assignments/submission/{id}', [AssignmentController::class, 'viewLi
 
 Route::post('/assignments/grade-submission/{id}', [GradeController::class, 'addGrading'])->name('submissions.addGrading');
 Route::post('/assignments/grade-submission/edit/{id}', [GradeController::class, 'editGrading'])->name('assignments.editGrading');
+/*
+|--------------------------------------------------------------------------
+| Communication Hub Routes
+|--------------------------------------------------------------------------
+*/
+Route::prefix('communication-hub')
+    ->middleware(['auth'])
+    ->group(function () {
+        Route::get('/', [CommunicationHubController::class, 'index'])
+            ->name('communication.index');
+
+        Route::post('/send', [CommunicationHubController::class, 'send'])
+            ->name('communication.send');
+    });
+
 /*
 |--------------------------------------------------------------------------
 | Admin Routes
