@@ -77,7 +77,7 @@ $('#chatForm').submit(function(e){
     e.preventDefault();
     let formData = new FormData(this);
     $.ajax({
-        url: "{{ secure_url(route('study-groups.message', $groupId)) }}",
+        url: "/study-groups/{{ $groupId }}/message",
         type: "POST",
         data: formData,
         contentType: false,
