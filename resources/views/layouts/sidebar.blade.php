@@ -8,7 +8,7 @@
     <!-- Logo -->
     <div class="p-6 border-b border-gray-200">
         <div class="flex items-center gap-3">
-            <div class="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center text-white text-xl">
+            <div class="w-12 h-12 bg-pink-300 rounded-xl flex items-center justify-center text-white text-xl">
                 <i class="fas fa-graduation-cap"></i>
             </div>
             <span class="sidebar-text text-xl font-bold text-gray-800">MY CAMPUS</span>
@@ -111,9 +111,12 @@
                     </a>
                 </li>
                 <li>
-                    <a href="#" class="flex items-center gap-4 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl transition">
-                        <i class="fas fa-book-open text-lg w-5"></i>
-                        <span class="sidebar-text">My Courses</span>
+                    <a href="{{ route('student.timetable') }}"
+                        class="flex items-center gap-4 px-4 py-3
+                        {{ request()->routeIs('student.timetable') ? 'text-white bg-gradient-to-r from-purple-600 to-pink-600' : 'text-gray-600 hover:bg-gray-100' }}
+                        rounded-xl transition">
+                        <i class="fas fa-calendar-alt text-lg w-5"></i>
+                        <span class="sidebar-text">My Timetable</span>
                     </a>
                 </li>
                 <li>
