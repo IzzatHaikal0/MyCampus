@@ -8,7 +8,7 @@ use App\Events\MessageSent;
 use App\Services\FirebaseService;
 use Illuminate\Support\Facades\Auth;
 
-class ChatController extends Controller
+class CommunicationChatController extends Controller
 {
     // Handle sending a new message
     public function send(Request $request, FirebaseService $firebase)

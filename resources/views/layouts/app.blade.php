@@ -13,11 +13,23 @@
     <!-- Main content -->
     <div id="main-content">
         @yield('content')
+        
+        @auth
+        
+    {{-- Floating Hub Launcher --}}
+    <button id="openHub" class="fixed bottom-6 right-6 z-50 p-2 bg-white rounded-full shadow-lg hover:scale-110 transition transform">
+        <img src="{{ asset('images/chat-icon.jpg') }}" alt="Hub" class="h-10 w-10">
+    </button>
+
+    {{-- Include the full Communication Hub --}}
+    @include('CommunicationHub.hub')
+@endauth
+
     </div>
 
     <!-- Communication Hub Floating Button -->
     @auth
-        @include('communicationhub.hub')
+        @include('CommunicationHub.hub')
     @endauth
 
     <!-- Push scripts here -->

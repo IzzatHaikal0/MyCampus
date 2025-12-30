@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\CommunicationHubController;
-use App\Http\Controllers\ChatController;
+use App\Http\Controllers\CommunicationChatController;
 
 /*
 |--------------------------------------------------------------------------
@@ -81,7 +81,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/communication-hub', [CommunicationHubController::class, 'index'])
         ->name('communication.hub');
 
-    Route::post('/chat/send', [ChatController::class, 'send'])
+    Route::post('/chat/send', [CommunicationChatController::class, 'send'])
         ->name('chat.send');
 });
 /*
