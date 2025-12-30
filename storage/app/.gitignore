@@ -2,3 +2,11 @@
 !private/
 !public/
 !.gitignore
+
+*
+!private/
+!public/
+!.gitignore
+
+# Firebase credentials (DO NOT COMMIT)
+storage/app/firebase/

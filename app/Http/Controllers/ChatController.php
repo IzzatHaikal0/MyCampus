@@ -10,13 +10,6 @@ use Illuminate\Support\Facades\Auth;
 
 class ChatController extends Controller
 {
-    // Display the chat page with all messages
-    public function index()
-    {
-        $messages = Message::with('user')->orderBy('created_at')->get();
-        return view('chat', compact('messages'));
-    }
-
     // Handle sending a new message
     public function send(Request $request, FirebaseService $firebase)
     {
