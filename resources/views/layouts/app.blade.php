@@ -20,5 +20,7 @@
         @include('communicationhub.hub')
     @endauth
 
+    <!-- Push scripts here -->
+    @stack('scripts')
 </body>
 </html>

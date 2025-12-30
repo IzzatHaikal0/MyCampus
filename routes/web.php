@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\CommunicationHubController;
+use App\Http\Controllers\ChatController;
 
 /*
 |--------------------------------------------------------------------------
@@ -71,19 +72,18 @@ Route::post('/assignments/grade-submission/{id}', [GradeController::class, 'addG
 Route::post('/assignments/grade-submission/edit/{id}', [GradeController::class, 'editGrading'])->name('assignments.editGrading');
 /*
 |--------------------------------------------------------------------------
-| Communication Hub Routes
+| Communication Routes
 |--------------------------------------------------------------------------
 */
-Route::prefix('communication-hub')
-    ->middleware(['auth'])
-    ->group(function () {
-        Route::get('/', [CommunicationHubController::class, 'index'])
-            ->name('communication.index');
+Route::middleware(['auth'])->group(function () {
 
-        Route::post('/send', [CommunicationHubController::class, 'send'])
-            ->name('communication.send');
-    });
+    // Main Communication Hub page (includes chat popup & announcements)
+    Route::get('/communication-hub', [CommunicationHubController::class, 'index'])
+        ->name('communication.hub');
 
+    Route::post('/chat/send', [ChatController::class, 'send'])
+        ->name('chat.send');
+});
 /*
 |--------------------------------------------------------------------------
 | Admin Routes

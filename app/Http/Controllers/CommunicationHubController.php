@@ -3,18 +3,17 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Message;
 
 class CommunicationHubController extends Controller
 {
-    // Show Chat page
-    public function chat()
+    // Main Communication Hub page
+    public function index()
     {
-        return view('CommunicationHub.chat');
-    }
+        $messages = Message::with('user')
+            ->orderBy('created_at')
+            ->get();
 
-    // Show Announcement page
-    public function announcement()
-    {
-        return view('CommunicationHub.announcement');
+        return view('CommunicationHub.index', compact('messages'));
     }
 }
