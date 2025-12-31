@@ -53,36 +53,50 @@
             
             <!-- Bottom Content Grid -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Today's Classes -->
-                <div class="bg-white rounded-2xl shadow-lg p-6">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                        <i class="fas fa-calendar-day text-purple-600"></i>
-                        Today's Classes
-                    </h2>
-                    <div class="space-y-4">
-                        <div class="bg-purple-50 border-l-4 border-purple-600 rounded-lg p-4 flex justify-between items-center hover:shadow-md transition">
-                            <div>
-                                <div class="font-semibold text-gray-800">Mathematics 101</div>
-                                <div class="text-sm text-gray-500">Room 204</div>
-                            </div>
-                            <div class="text-purple-600 font-semibold">09:00 AM</div>
+             <!-- Today's Classes -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                    <i class="fas fa-calendar-day text-purple-600"></i>
+                    Today's Classes
+                </h2>
+
+                <div class="space-y-4">
+                @if(count($lessons) > 0)
+                <div class="space-y-4">
+                    @foreach($lessons as $lesson)
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <h3 class="text-lg font-semibold">
+                                {{ $lesson['subject_name'] }}
+                            </h3>
+
+                            <p class="text-sm text-gray-600">
+                                📚 Class Section:
+                                <span class="font-medium text-gray-800">
+                                    {{ $lesson['class_section'] }}
+                                </span>
+                            </p>
+
+                            <p class="text-sm text-gray-600">
+                                🕒 Time:
+                                {{ $lesson['start_time'] }} – {{ $lesson['end_time'] }}
+                            </p>
+
+                            <p class="text-sm text-gray-600">
+                                📍 Location:
+                                {{ $lesson['locationmeeting_link'] }}
+                            </p>
                         </div>
-                        <div class="bg-purple-50 border-l-4 border-purple-600 rounded-lg p-4 flex justify-between items-center hover:shadow-md transition">
-                            <div>
-                                <div class="font-semibold text-gray-800">Physics Advanced</div>
-                                <div class="text-sm text-gray-500">Lab 3</div>
-                            </div>
-                            <div class="text-purple-600 font-semibold">11:00 AM</div>
-                        </div>
-                        <div class="bg-purple-50 border-l-4 border-purple-600 rounded-lg p-4 flex justify-between items-center hover:shadow-md transition">
-                            <div>
-                                <div class="font-semibold text-gray-800">Chemistry Basics</div>
-                                <div class="text-sm text-gray-500">Room 105</div>
-                            </div>
-                            <div class="text-purple-600 font-semibold">02:00 PM</div>
-                        </div>
-                    </div>
+                    @endforeach
                 </div>
+            @else
+                <div class="text-center py-10 text-gray-500">
+                    <h2 class="text-xl font-semibold">No Classes Today</h2>
+                    <p>Enjoy your free day!</p>
+                </div>
+            @endif
+
+    </div>
+</div>
 
                 <!-- Students in Class Today -->
                 <div class="bg-white rounded-2xl shadow-lg p-6">
