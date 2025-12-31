@@ -10,7 +10,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StudyGroupController;
 use App\Http\Controllers\CommunicationHubController;
 use App\Http\Controllers\CommunicationChatController;
-
+use App\Http\Controllers\FirebaseController;
 use App\Http\Middleware\SessionMiddleware;
 
 /*
@@ -25,6 +25,13 @@ Route::post('/register', [AuthController::class, 'register'])->name('register.po
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
+
+/*
+|--------------------------------------------------------------------------
+| Firebase Routes
+|--------------------------------------------------------------------------
+*/
+Route::get('/firebase/users', [FirebaseController::class, 'listUsers']);
 
 /*
 |--------------------------------------------------------------------------
