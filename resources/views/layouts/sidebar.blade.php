@@ -1,7 +1,7 @@
 <!-- resources/views/layouts/sidebar.blade.php -->
 <aside id="sidebar" class="fixed h-screen bg-white shadow-xl transition-all duration-300 z-50 w-72">
     <!-- Toggle Button -->
-    <button onclick="toggleSidebar()" class="absolute -right-4 top-6 bg-purple-600 text-white p-2 rounded-full shadow-lg hover:bg-purple-700 transition z-50">
+    <button onclick="(function(){fetch('http://127.0.0.1:7242/ingest/eb302888-1413-4b84-8233-4d3812eb0896',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'layouts/sidebar.blade.php:4',message:'Sidebar button clicked',data:{toggleSidebarExists:typeof toggleSidebar!=='undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});try{toggleSidebar();}catch(e){fetch('http://127.0.0.1:7242/ingest/eb302888-1413-4b84-8233-4d3812eb0896',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'layouts/sidebar.blade.php:4',message:'toggleSidebar error',data:{error:e.toString(),errorMessage:e.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});throw e;}})();" class="absolute -right-4 top-6 bg-purple-600 text-white p-2 rounded-full shadow-lg hover:bg-purple-700 transition z-50">
         <i class="fas fa-bars text-sm"></i>
     </button>
 

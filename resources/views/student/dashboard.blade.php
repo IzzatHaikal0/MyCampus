@@ -147,171 +147,206 @@
 </div>
 
 <script>
-const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    databaseURL: "{{ env('FIREBASE_DATABASE_URL') }}",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
-};
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/eb302888-1413-4b84-8233-4d3812eb0896',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'student/dashboard.blade.php:149',message:'Script execution started',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+// #endregion
 
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
-
-const db = firebase.database();
-const studentUid = "{{ session('firebase_user.uid') }}";
-
-const notificationBtn = document.getElementById('notificationBtn');
-const notificationDropdown = document.getElementById('notificationDropdown');
-const notificationsList = document.getElementById('notificationsList');
-const notificationCount = document.getElementById('notificationCount');
-const noNotifications = document.getElementById('noNotifications');
-const markAllReadBtn = document.getElementById('markAllRead');
-
-let unreadCount = 0;
-
-// Toggle dropdown
-notificationBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    notificationDropdown.classList.toggle('hidden');
-});
-document.addEventListener('click', () => notificationDropdown.classList.add('hidden'));
-notificationDropdown.addEventListener('click', e => e.stopPropagation());
-
-// Update unread badge
-function updateBadge() {
-    if (unreadCount > 0) {
-        notificationCount.innerText = unreadCount;
-        notificationCount.classList.remove('hidden');
-    } else {
-        notificationCount.classList.add('hidden');
-    }
-}
-
-// Render a single notification
-function renderNotification(notification, key, prepend = true) {
-    if (document.getElementById(`noti-${key}`)) return; // prevent duplicates
-
-    const div = document.createElement('div');
-    div.id = `noti-${key}`;
-    div.className = 'p-3 transition flex justify-between items-start gap-2 cursor-pointer';
-    if (!notification.read) div.classList.add('bg-gray-100', 'rounded-lg');
-
-    // Notification type label
-    let typeLabel = '';
-    let typeColor = '';
-    switch(notification.type) {
-        case 'lesson_cancelled':
-            typeLabel = 'Class Cancelled';
-            typeColor = 'text-red-600';
-            break;
-        case 'lesson_time_changed':
-            typeLabel = 'Time Changed';
-            typeColor = 'text-yellow-600';
-            break;
-        case 'lesson_location_changed':
-            typeLabel = 'Place Changed';
-            typeColor = 'text-blue-600';
-            break;
-        default:
-            typeLabel = 'Notification';
-            typeColor = 'text-gray-800';
-    }
-
-    div.innerHTML = `
-        <div class="flex-1 notification-body">
-            <div class="${typeColor} font-semibold">${typeLabel}</div>
-            <div class="text-sm text-gray-700 mt-1">${notification.message ?? ''}</div>
-            <div class="text-xs text-gray-500 mt-1">Class Date: ${notification.class_date ?? 'N/A'}</div>
-            <div class="text-xs text-gray-400 mt-1">${notification.created_at ? new Date(notification.created_at).toLocaleString() : ''}</div>
-        </div>
-        <button class="delete-notification text-gray-400 hover:text-red-500 ml-2">
-            <i class="fas fa-xmark"></i>
-        </button>
-    `;
-
-    // Mark as read
-    div.querySelector('.notification-body').addEventListener('click', () => {
-        if (!notification.read) {
-            db.ref(`notifications/${studentUid}/${key}`).update({ read: true });
-            notification.read = true;
-            div.classList.remove('bg-gray-100');
-            unreadCount--;
-            updateBadge();
+    // Sidebar Toggle Script (Matching your other pages)
+    function toggleSidebar() {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/eb302888-1413-4b84-8233-4d3812eb0896',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'student/dashboard.blade.php:153',message:'toggleSidebar function definition executing',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        const sidebarTexts = document.querySelectorAll('.sidebar-text');
+        
+        if (sidebar.classList.contains('w-72')) {
+            // Collapse
+            sidebar.classList.remove('w-72');
+            sidebar.classList.add('w-20');
+            mainContent.classList.remove('ml-72');
+            mainContent.classList.add('ml-20');
+            sidebarTexts.forEach(text => text.classList.add('hidden'));
+        } else {
+            // Expand
+            sidebar.classList.remove('w-20');
+            sidebar.classList.add('w-72');
+            mainContent.classList.remove('ml-20');
+            mainContent.classList.add('ml-72');
+            sidebarTexts.forEach(text => text.classList.remove('hidden'));
         }
-    });
-
-    // Delete notification
-    div.querySelector('.delete-notification').addEventListener('click', e => {
-        e.stopPropagation();
-        if (!confirm('Delete this notification?')) return;
-
-        db.ref(`notifications/${studentUid}/${key}`).remove();
-        div.remove();
-        if (!notification.read) unreadCount--;
-        updateBadge();
-
-        if (!notificationsList.children.length) noNotifications.classList.remove('hidden');
-    });
-
-    if (prepend) notificationsList.prepend(div);
-    else notificationsList.appendChild(div);
-}
-
-// Load existing notifications
-db.ref(`notifications/${studentUid}`).limitToLast(50).once('value', snapshot => {
-    notificationsList.innerHTML = '';
-    unreadCount = 0;
-
-    if (!snapshot.exists()) {
-        noNotifications.classList.remove('hidden');
-        updateBadge();
-        return;
     }
 
-    noNotifications.classList.add('hidden');
+    
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        databaseURL: "{{ env('FIREBASE_DATABASE_URL') }}",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
 
-    snapshot.forEach(child => {
-        const notification = child.val();
-        const key = child.key;
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+
+    const db = firebase.database();
+    const studentUid = "{{ session('firebase_user.uid') }}";
+
+    const notificationBtn = document.getElementById('notificationBtn');
+    const notificationDropdown = document.getElementById('notificationDropdown');
+    const notificationsList = document.getElementById('notificationsList');
+    const notificationCount = document.getElementById('notificationCount');
+    const noNotifications = document.getElementById('noNotifications');
+    const markAllReadBtn = document.getElementById('markAllRead');
+
+    let unreadCount = 0;
+
+    // Toggle dropdown
+    notificationBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        notificationDropdown.classList.toggle('hidden');
+    });
+    document.addEventListener('click', () => notificationDropdown.classList.add('hidden'));
+    notificationDropdown.addEventListener('click', e => e.stopPropagation());
+
+    // Update unread badge
+    function updateBadge() {
+        if (unreadCount > 0) {
+            notificationCount.innerText = unreadCount;
+            notificationCount.classList.remove('hidden');
+        } else {
+            notificationCount.classList.add('hidden');
+        }
+    }
+
+    // Render a single notification
+    function renderNotification(notification, key, prepend = true) {
+        if (document.getElementById(`noti-${key}`)) return; // prevent duplicates
+
+        const div = document.createElement('div');
+        div.id = `noti-${key}`;
+        div.className = 'p-3 transition flex justify-between items-start gap-2 cursor-pointer';
+        if (!notification.read) div.classList.add('bg-gray-100', 'rounded-lg');
+
+        // Notification type label
+        let typeLabel = '';
+        let typeColor = '';
+        switch(notification.type) {
+            case 'lesson_cancelled':
+                typeLabel = 'Class Cancelled';
+                typeColor = 'text-red-600';
+                break;
+            case 'lesson_time_changed':
+                typeLabel = 'Time Changed';
+                typeColor = 'text-yellow-600';
+                break;
+            case 'lesson_location_changed':
+                typeLabel = 'Place Changed';
+                typeColor = 'text-blue-600';
+                break;
+            default:
+                typeLabel = 'Notification';
+                typeColor = 'text-gray-800';
+        }
+
+        div.innerHTML = `
+            <div class="flex-1 notification-body">
+                <div class="${typeColor} font-semibold">${typeLabel}</div>
+                <div class="text-sm text-gray-700 mt-1">${notification.message ?? ''}</div>
+                <div class="text-xs text-gray-500 mt-1">Class Date: ${notification.class_date ?? 'N/A'}</div>
+                <div class="text-xs text-gray-400 mt-1">${notification.created_at ? new Date(notification.created_at).toLocaleString() : ''}</div>
+            </div>
+            <button class="delete-notification text-gray-400 hover:text-red-500 ml-2">
+                <i class="fas fa-xmark"></i>
+            </button>
+        `;
+
+        // Mark as read
+        div.querySelector('.notification-body').addEventListener('click', () => {
+            if (!notification.read) {
+                db.ref(`notifications/${studentUid}/${key}`).update({ read: true });
+                notification.read = true;
+                div.classList.remove('bg-gray-100');
+                unreadCount--;
+                updateBadge();
+            }
+        });
+
+        // Delete notification
+        div.querySelector('.delete-notification').addEventListener('click', e => {
+            e.stopPropagation();
+            if (!confirm('Delete this notification?')) return;
+
+            db.ref(`notifications/${studentUid}/${key}`).remove();
+            div.remove();
+            if (!notification.read) unreadCount--;
+            updateBadge();
+
+            if (!notificationsList.children.length) noNotifications.classList.remove('hidden');
+        });
+
+        if (prepend) notificationsList.prepend(div);
+        else notificationsList.appendChild(div);
+    }
+
+    // Load existing notifications
+    db.ref(`notifications/${studentUid}`).limitToLast(50).once('value', snapshot => {
+        notificationsList.innerHTML = '';
+        unreadCount = 0;
+
+        if (!snapshot.exists()) {
+            noNotifications.classList.remove('hidden');
+            updateBadge();
+            return;
+        }
+
+        noNotifications.classList.add('hidden');
+
+        snapshot.forEach(child => {
+            const notification = child.val();
+            const key = child.key;
+
+            if (!notification.read) unreadCount++;
+            renderNotification(notification, key, false);
+        });
+
+        updateBadge();
+    });
+
+    // Listen for new notifications
+    db.ref(`notifications/${studentUid}`).on('child_added', snapshot => {
+        const notification = snapshot.val();
+        const key = snapshot.key;
+
+        if (document.getElementById(`noti-${key}`)) return;
+
+        noNotifications.classList.add('hidden');
 
         if (!notification.read) unreadCount++;
-        renderNotification(notification, key, false);
-    });
-
-    updateBadge();
-});
-
-// Listen for new notifications
-db.ref(`notifications/${studentUid}`).on('child_added', snapshot => {
-    const notification = snapshot.val();
-    const key = snapshot.key;
-
-    if (document.getElementById(`noti-${key}`)) return;
-
-    noNotifications.classList.add('hidden');
-
-    if (!notification.read) unreadCount++;
-    renderNotification(notification, key, true);
-    updateBadge();
-});
-
-// Mark all read
-markAllReadBtn.addEventListener('click', () => {
-    db.ref(`notifications/${studentUid}`).once('value', snapshot => {
-        snapshot.forEach(child => {
-            db.ref(`notifications/${studentUid}/${child.key}`).update({ read: true });
-        });
-        unreadCount = 0;
+        renderNotification(notification, key, true);
         updateBadge();
-
-        const items = notificationsList.querySelectorAll('.notification-body');
-        items.forEach(div => div.parentNode.classList.remove('bg-gray-100'));
     });
-});
+
+    // Mark all read
+    markAllReadBtn.addEventListener('click', () => {
+        db.ref(`notifications/${studentUid}`).once('value', snapshot => {
+            snapshot.forEach(child => {
+                db.ref(`notifications/${studentUid}/${child.key}`).update({ read: true });
+            });
+            unreadCount = 0;
+            updateBadge();
+
+            const items = notificationsList.querySelectorAll('.notification-body');
+            items.forEach(div => div.parentNode.classList.remove('bg-gray-100'));
+        });
+    });
+
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/eb302888-1413-4b84-8233-4d3812eb0896',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'student/dashboard.blade.php:339',message:'End of Firebase script, checking toggleSidebar',data:{toggleSidebarExists:typeof toggleSidebar!=='undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+// #endregion
 </script>
 
 </body>
