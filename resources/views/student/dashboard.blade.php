@@ -29,14 +29,14 @@
     <button id="notificationBtn" class="relative text-gray-600 hover:text-purple-600 transition focus:outline-none">
         <i class="fas fa-bell text-2xl"></i>
         <span id="notificationCount"
-              class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">
+            class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">
             0
         </span>
     </button>
 
     <div id="notificationDropdown"
-         class="hidden absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg z-50 flex flex-col"
-         style="max-height: calc(100vh - 120px);">
+        class="hidden absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg z-50 flex flex-col"
+        style="max-height: calc(100vh - 120px);">
         <div class="flex justify-between items-center px-4 py-3 border-b font-semibold text-gray-700">
             <span>Notifications</span>
             <button id="markAllRead" class="text-sm text-purple-600 hover:underline">Mark all read</button>

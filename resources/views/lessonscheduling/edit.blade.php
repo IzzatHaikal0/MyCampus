@@ -127,6 +127,15 @@
                                    class="border border-gray-300 rounded-lg p-2 mt-1" min="{{ date('Y-m-d') }}">
                         </div>
 
+                        <div class="flex items-center gap-2">
+    <input type="checkbox" name="edit_this_date_only" value="1"
+           class="h-4 w-4 text-blue-600">
+    <label class="text-blue-600 font-semibold">
+        Edit class on selected date only
+    </label>
+</div>
+
+
                        <div class="flex items-center gap-2">
     <input type="checkbox" name="cancel_this_date" value="1"
            class="h-4 w-4 text-red-600">

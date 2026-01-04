@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Kreait\Firebase\Factory;
-use Kreait\Firebase\Database;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Session;
 
@@ -39,7 +38,6 @@ class LessonController extends Controller
         return $factory->createDatabase();
     }
 
-
     /* =========================================================
        CREATE LESSON VIEW
     ========================================================= */
@@ -53,15 +51,10 @@ class LessonController extends Controller
     ========================================================= */
     public function store(Request $request)
     {
-        // 1. Initialize Database if it hasn't been done yet
-        if (!$this->database) {
-            $this->database = $this->firebaseDatabase();
-        }
-
-        // 2. Validation
+        // Validation
         $request->validate([
             'subject_name' => 'required|string|max:255',
-            'class_section' => 'required|string|max:255',
+            'class_section' => 'required|string|max:255', // updated
             'date' => 'required|date',
             'start_time' => 'required',
             'end_time' => 'required|after:start_time',
@@ -72,7 +65,7 @@ class LessonController extends Controller
             $newStart = strtotime($request->start_time);
             $newEnd = strtotime($request->end_time);
 
-            // 3. Fetch lessons from Firebase
+            // Get existing lessons
             $lessonsRef = $this->database->getReference("lessons")->getValue() ?? [];
             $existingLessons = [];
 
@@ -82,7 +75,7 @@ class LessonController extends Controller
                 }
             }
 
-            // 4. Check for Overlaps
+            // Check overlap
             foreach ($existingLessons as $lesson) {
                 $existingStart = strtotime($lesson['start_time']);
                 $existingEnd = strtotime($lesson['end_time']);
@@ -91,11 +84,11 @@ class LessonController extends Controller
                 }
             }
 
-            // 5. Store the data in Firebase
-            $newLessonRef = $this->database->getReference('lessons')->push();
-            $newLessonRef->set([
+            // Store lesson
+            $lessonRef = $this->database->getReference('lessons')->push();
+            $lessonRef->set([
                 'subject_name' => $request->subject_name,
-                'class_section' => $request->class_section,
+                'class_section' => $request->class_section, // always use class_section
                 'date' => $request->date,
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time,
@@ -108,7 +101,6 @@ class LessonController extends Controller
 
             return redirect()->route('lessons.add')->with('success', 'Lesson added successfully.');
         } catch (\Exception $e) {
-            // This will now show the REAL error if it fails (likely a path error)
             return back()->with('error', 'Failed to add lesson: ' . $e->getMessage());
         }
     }
@@ -133,14 +125,15 @@ class LessonController extends Controller
     /* =========================================================
        UPDATE LESSON
     ========================================================= */
-    public function update(Request $request, $id)
+public function update(Request $request, $id)
 {
+    // 1️⃣ Validate input
     $request->validate([
         'subject_name' => 'required|string|max:255',
         'class_section' => 'required|string|max:255',
         'date' => 'required|date',
         'start_time' => 'required',
-        'end_time' => 'required|string',
+        'end_time' => 'required|after:start_time',
         'locationmeeting_link' => 'required|string|max:255',
     ]);
 
@@ -152,32 +145,27 @@ class LessonController extends Controller
         return back()->with('error', 'Lesson not found.');
     }
 
+    $classSection = $oldLesson['class_section'] ?? null;
+    $lessonDate = $request->date;
+
     /* ===============================
        ❌ CANCEL THIS DATE ONLY
     =============================== */
     if ($request->has('cancel_this_date')) {
 
-        $cancelDate = $request->date;
-
-        // Repeated lesson → cancel specific date
         if (!empty($oldLesson['repeat_frequency'])) {
-            $lessonRef
-                ->getChild("cancelled_dates/{$cancelDate}")
-                ->set(true);
-        }
-        // Single lesson → cancel completely
-        else {
+            $lessonRef->getChild("cancelled_dates/{$lessonDate}")->set(true);
+        } else {
             $lessonRef->update(['cancelled' => true]);
         }
 
-        // 🔔 Notify students (CANCEL)
-        if (!empty($oldLesson['class_section'])) {
+        if ($classSection) {
             $notification = $this->buildNotification(
                 'cancelled',
                 $id,
-                array_merge($oldLesson, ['date' => $cancelDate])
+                array_merge($oldLesson, ['date' => $lessonDate])
             );
-            $this->notifyStudentsByClass($oldLesson['class_section'], $notification);
+            $this->notifyStudentsByClass($classSection, $notification);
         }
 
         return redirect()->route('lessons.list')
@@ -185,18 +173,46 @@ class LessonController extends Controller
     }
 
     /* ===============================
-       ✏️ NORMAL UPDATE
+       ✏️ EDIT THIS DATE ONLY (REPEATED LESSON)
     =============================== */
+    if (!empty($oldLesson['repeat_frequency']) && $request->has('edit_this_date_only')) {
 
-    // Detect changes
-    $timeChanged =
-        $oldLesson['start_time'] !== $request->start_time ||
-        $oldLesson['end_time'] !== $request->end_time;
+        // Update override for this date
+        $lessonRef->getChild("overrides/{$lessonDate}")->update([
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
+            'locationmeeting_link' => $request->locationmeeting_link,
+        ]);
 
-    $locationChanged =
-        $oldLesson['locationmeeting_link'] !== $request->locationmeeting_link;
+        // Merge override for notifications
+        $updatedLesson = array_merge($oldLesson, [
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
+            'locationmeeting_link' => $request->locationmeeting_link,
+            'date' => $lessonDate,
+        ]);
 
-    // Update lesson
+        if ($classSection) {
+            // Notify time changes
+            if ($oldLesson['start_time'] !== $request->start_time || $oldLesson['end_time'] !== $request->end_time) {
+                $notification = $this->buildNotification('time', $id, $updatedLesson, $request->all());
+                $this->notifyStudentsByClass($classSection, $notification);
+            }
+
+            // Notify location changes
+            if ($oldLesson['locationmeeting_link'] !== $request->locationmeeting_link) {
+                $notification = $this->buildNotification('location', $id, $updatedLesson, $request->all());
+                $this->notifyStudentsByClass($classSection, $notification);
+            }
+        }
+
+        return redirect()->route('lessons.list')
+            ->with('success', 'Lesson updated for this date only.');
+    }
+
+    /* ===============================
+       ✏️ NORMAL UPDATE (entire lesson/series)
+    =============================== */
     $lessonRef->update([
         'subject_name' => $request->subject_name,
         'class_section' => $request->class_section,
@@ -209,37 +225,36 @@ class LessonController extends Controller
         'repeat_until' => $request->repeat_until ?? null,
     ]);
 
-    /* ===============================
-       🔔 NOTIFICATIONS (TIME / LOCATION)
-    =============================== */
-    if (!empty($oldLesson['class_section'])) {
+    $updatedLesson = array_merge($oldLesson, [
+        'subject_name' => $request->subject_name,
+        'class_section' => $request->class_section,
+        'date' => $request->date,
+        'start_time' => $request->start_time,
+        'end_time' => $request->end_time,
+        'locationmeeting_link' => $request->locationmeeting_link,
+        'repeat_schedule' => $request->repeat_schedule ?? null,
+        'repeat_frequency' => $request->repeat_frequency ?? null,
+        'repeat_until' => $request->repeat_until ?? null,
+    ]);
 
-        // ⏰ Time change
-        if ($timeChanged) {
-            $notification = $this->buildNotification(
-                'time',
-                $id,
-                $oldLesson,
-                $request->all()
-            );
-            $this->notifyStudentsByClass($oldLesson['class_section'], $notification);
+    if ($classSection) {
+        // Notify time changes
+        if ($oldLesson['start_time'] !== $request->start_time || $oldLesson['end_time'] !== $request->end_time) {
+            $notification = $this->buildNotification('time', $id, $updatedLesson, $request->all());
+            $this->notifyStudentsByClass($classSection, $notification);
         }
 
-        // 📍 Location change
-        if ($locationChanged) {
-            $notification = $this->buildNotification(
-                'location',
-                $id,
-                $oldLesson,
-                $request->all()
-            );
-            $this->notifyStudentsByClass($oldLesson['class_section'], $notification);
+        // Notify location changes
+        if ($oldLesson['locationmeeting_link'] !== $request->locationmeeting_link) {
+            $notification = $this->buildNotification('location', $id, $updatedLesson, $request->all());
+            $this->notifyStudentsByClass($classSection, $notification);
         }
     }
 
     return redirect()->route('lessons.list')
         ->with('success', 'Lesson updated successfully.');
 }
+
 
     /* =========================================================
        DELETE LESSON
@@ -322,13 +337,21 @@ class LessonController extends Controller
 
         $lessonDate = Carbon::parse($lesson['date'], 'Asia/Kuala_Lumpur')->startOfDay();
 
-        // ✅ NORMAL lesson today
-        if ($lessonDate->equalTo($today)) {
-            $lesson['id'] = $id;
-            $lessonsToday[] = $lesson;
-            continue;
-        }
+        // 🔁 Apply override if exists
+$lessonCopy = $lesson;
 
+if (!empty($lesson['overrides'][$todayString])) {
+    $lessonCopy = array_merge($lessonCopy, $lesson['overrides'][$todayString]);
+}
+
+// ✅ NORMAL (non-repeated) lesson today ONLY
+if ($lessonDate->equalTo($today) && empty($lesson['repeat_frequency'])) {
+    $lessonCopy['id'] = $id;
+    $lessonsToday[] = $lessonCopy;
+}
+
+
+        
         // ✅ REPEATED lessons (UNCHANGED)
         if (!empty($lesson['repeat_frequency']) && !empty($lesson['repeat_until'])) {
             $start = Carbon::parse($lesson['date'], 'Asia/Kuala_Lumpur')->startOfDay();
@@ -355,7 +378,7 @@ class LessonController extends Controller
 }
 
 
-    public function studentDashboard()
+  public function studentDashboard()
 {
     $user = session('firebase_user');
     if (!$user) return redirect('/login');
@@ -377,41 +400,61 @@ class LessonController extends Controller
         $lessonClass = $lesson['class_section'] ?? $lesson['class_title'] ?? null;
         if ($lessonClass !== $classSection || empty($lesson['date'])) continue;
 
-        // ❌ Skip cancelled single lesson
+        // Skip cancelled single lesson
         if (!empty($lesson['cancelled'])) continue;
 
-        // ❌ Skip cancelled repeated lesson for today
+        // Skip cancelled repeated lesson for today
         if (!empty($lesson['cancelled_dates'][$todayString])) continue;
 
-        $lessonDate = Carbon::parse($lesson['date'], 'Asia/Kuala_Lumpur')->startOfDay();
+        $baseDate = Carbon::parse($lesson['date'], 'Asia/Kuala_Lumpur')->startOfDay();
 
-        // ✅ NORMAL lesson today
-        if ($lessonDate->equalTo($today)) {
-            $lesson['id'] = $id;
-            $todayLessons[] = $lesson;
+        // Initialize lesson copy
+        $lessonCopy = $lesson;
+
+        // Apply override if exists for today (important: includes location)
+        if (!empty($lesson['overrides'][$todayString])) {
+            $lessonCopy = array_merge($lessonCopy, $lesson['overrides'][$todayString]);
+        }
+
+        // Single lesson today
+        if ($baseDate->equalTo($today)) {
+            $lessonCopy['id'] = $id;
+            $todayLessons[] = $lessonCopy;
             continue;
         }
 
-        // ✅ REPEATED lessons (UNCHANGED)
-        if (!empty($lesson['repeat_frequency']) && !empty($lesson['repeat_until'])) {
-            $start = Carbon::parse($lesson['date'], 'Asia/Kuala_Lumpur')->startOfDay();
-            $end   = Carbon::parse($lesson['repeat_until'], 'Asia/Kuala_Lumpur')->endOfDay();
+        // Repeated lessons
+        $repeat = $lesson['repeat_frequency'] ?? null;
+        $repeatUntil = !empty($lesson['repeat_until']) 
+                        ? Carbon::parse($lesson['repeat_until'], 'Asia/Kuala_Lumpur')->endOfDay() 
+                        : $baseDate->copy();
 
-            if ($today->between($start, $end)) {
-                if (
-                    $lesson['repeat_frequency'] === 'daily' ||
-                    ($lesson['repeat_frequency'] === 'weekly' &&
-                     $today->dayOfWeek === $start->dayOfWeek)
-                ) {
-                    $lessonCopy = $lesson;
-                    $lessonCopy['date'] = $todayString;
-                    $lessonCopy['id'] = $id;
-                    $todayLessons[] = $lessonCopy;
+        if ($repeat && $today->between($baseDate, $repeatUntil)) {
+
+            $isRepeatedToday = false;
+
+            if ($repeat === 'daily') {
+                $isRepeatedToday = true;
+            } elseif ($repeat === 'weekly' && $today->dayOfWeek === $baseDate->dayOfWeek) {
+                $isRepeatedToday = true;
+            }
+
+            if ($isRepeatedToday) {
+                $lessonCopy = $lesson;
+                $lessonCopy['date'] = $todayString;
+
+                // Apply override if exists (must include location)
+                if (!empty($lesson['overrides'][$todayString])) {
+                    $lessonCopy = array_merge($lessonCopy, $lesson['overrides'][$todayString]);
                 }
+
+                $lessonCopy['id'] = $id;
+                $todayLessons[] = $lessonCopy;
             }
         }
     }
 
+    // Sort by start time
     usort($todayLessons, fn($a, $b) => strcmp($a['start_time'], $b['start_time']));
 
     return view('student.dashboard', ['todayLessons' => $todayLessons]);
@@ -419,80 +462,105 @@ class LessonController extends Controller
 
    public function studentTimetable(Request $request)
 {
-    $user = Session::get('firebase_user');
-    if (!$user) return redirect('/login')->with('error', 'Please login first');
+    try {
+        $studentId = session('firebase_user.uid');
+        if (!$studentId) return redirect('/login');
 
-    $studentId = $user['uid'];
-    $student = $this->database->getReference('users/' . $studentId)->getValue();
+        $student = $this->database
+            ->getReference('users/' . $studentId)
+            ->getValue();
 
-    if (!$student || empty($student['class_section'])) {
-        return view('lessonscheduling.viewlesson', [
-            'lessons' => [],
-            'classSection' => null,
-            'error' => 'You are not assigned to any class.'
-        ]);
-    }
+        if (!$student || empty($student['class_section'])) {
+            return view('lessonscheduling.viewlesson', [
+                'lessons' => [],
+                'error' => 'You are not assigned to any class.'
+            ]);
+        }
 
-    $classSection = $student['class_section'];
-    $lessonsRef = $this->database->getReference('lessons')->getValue() ?? [];
-    $lessons = [];
+        $classSection = $student['class_section'];
 
-    foreach ($lessonsRef as $id => $lesson) {
+        $month = $request->get('month')
+            ? Carbon::parse($request->get('month'))
+            : Carbon::now();
 
-        $lessonClass = $lesson['class_section'] ?? $lesson['class_title'] ?? null;
-        if ($lessonClass !== $classSection || empty($lesson['date'])) continue;
+        $startOfMonth = $month->copy()->startOfMonth();
+        $endOfMonth   = $month->copy()->endOfMonth();
 
-        // ❌ Skip cancelled single lesson
-        if (!empty($lesson['cancelled'])) continue;
+        $lessonsRef = $this->database->getReference('lessons')->getValue() ?? [];
+        $lessons = [];
 
-        $startDate = Carbon::parse($lesson['date'], 'Asia/Kuala_Lumpur')->startOfDay();
+        foreach ($lessonsRef as $id => $lesson) {
 
-        // ✅ 1️⃣ NORMAL lesson
-        $lessonCopy = $lesson;
-        $lessonCopy['id'] = $id;
-        $lessons[] = $lessonCopy;
+            // ✅ Match class section
+            if (($lesson['class_section'] ?? null) !== $classSection) continue;
 
-        // ✅ 2️⃣ REPEATED lessons
-        if (!empty($lesson['repeat_frequency']) && !empty($lesson['repeat_until'])) {
+            // ❌ Skip cancelled single lesson
+            if (!empty($lesson['cancelled'])) continue;
 
-            $endDate = Carbon::parse($lesson['repeat_until'], 'Asia/Kuala_Lumpur')->endOfDay();
-            $current = $startDate->copy()->addDay();
+            if (empty($lesson['date'])) continue;
 
-            while ($current->lte($endDate)) {
+            $baseDate = Carbon::parse($lesson['date']);
+            $repeat = $lesson['repeat_frequency'] ?? null;
+            $repeatUntil = Carbon::parse($lesson['repeat_until'] ?? $lesson['date']);
 
-                // ❌ Skip cancelled repeated date
-                if (!empty($lesson['cancelled_dates'][$current->toDateString()])) {
-                    $current->addDay();
-                    continue;
+            // ===============================
+            // 1️⃣ NON-REPEATED LESSON
+            // ===============================
+            if (empty($repeat)) {
+                if ($baseDate->between($startOfMonth, $endOfMonth)) {
+                    $lessonCopy = $lesson;
+                    $lessonCopy['id'] = $id;
+                    $lessonCopy['date'] = $baseDate->toDateString();
+                    $lessons[] = $lessonCopy;
+                }
+                continue;
+            }
+
+            // ===============================
+            // 2️⃣ REPEATED LESSON
+            // ===============================
+            $current = $baseDate->copy();
+
+            while ($current->lte($repeatUntil) && $current->lte($endOfMonth)) {
+
+                if ($current->gte($startOfMonth)) {
+
+                    $dateKey = $current->toDateString();
+
+                    // ❌ Skip cancelled date
+                    if (!empty($lesson['cancelled_dates'][$dateKey])) {
+                        $repeat === 'daily'
+                            ? $current->addDay()
+                            : $current->addWeek();
+                        continue;
+                    }
+
+                    // 🔁 Apply override
+                  $lessonCopy = $lesson;
+
+if (!empty($lesson['overrides'][$dateKey])) {
+    $lessonCopy = array_merge($lessonCopy, $lesson['overrides'][$dateKey]);
+}
+
+                    $lessonCopy['id'] = $id;
+                    $lessonCopy['date'] = $dateKey;
+
+                    $lessons[] = $lessonCopy;
                 }
 
-                if (
-                    $lesson['repeat_frequency'] === 'daily' ||
-                    (
-                        $lesson['repeat_frequency'] === 'weekly' &&
-                        $current->dayOfWeek === $startDate->dayOfWeek
-                    )
-                ) {
-                    $repeatLesson = $lesson;
-                    $repeatLesson['date'] = $current->toDateString();
-                    $repeatLesson['id'] = $id;
-                    $lessons[] = $repeatLesson;
-                }
-
-                $current->addDay();
+                $repeat === 'daily'
+                    ? $current->addDay()
+                    : $current->addWeek();
             }
         }
+
+        return view('lessonscheduling.viewlesson', compact('lessons'));
+
+    } catch (\Exception $e) {
+        return view('lessonscheduling.viewlesson', [
+            'error' => 'Failed to load timetable: ' . $e->getMessage()
+        ]);
     }
-
-    // ✅ Sort by date then start time
-    usort($lessons, fn($a, $b) =>
-        strcmp($a['date'], $b['date']) ?: strcmp($a['start_time'], $b['start_time'])
-    );
-
-    return view('lessonscheduling.viewlesson', [
-        'lessons' => $lessons,
-        'classSection' => $classSection
-    ]);
 }
 
   /* =========================================================
@@ -586,40 +654,25 @@ public function markNotificationRead($notificationId)
     ========================================================= */
     public function checkOverlap(Request $request)
     {
-        // 1. Safety Check: If constructor failed, try to initialize here
-        if (!$this->database) {
-            $this->database = $this->firebaseDatabase();
-        }
-
         $date = $request->date;
         $newStart = strtotime($request->start_time);
         $newEnd = strtotime($request->end_time);
 
-        try {
-            // 2. Fetch data from Firebase
-            $lessonsRef = $this->database->getReference('lessons')->getValue() ?? [];
-            $overlap = false;
+        $lessonsRef = $this->database->getReference('lessons')->getValue() ?? [];
+        $overlap = false;
 
-            foreach ($lessonsRef as $lesson) {
-                // Check if it's the same day and not a cancelled lesson
-                if (($lesson['date'] ?? null) === $date && empty($lesson['cancelled'])) {
-                    $existingStart = strtotime($lesson['start_time']);
-                    $existingEnd = strtotime($lesson['end_time']);
-                    
-                    // Overlap Logic: (StartA < EndB) and (EndA > StartB)
-                    if (($newStart < $existingEnd) && ($newEnd > $existingStart)) {
-                        $overlap = true;
-                        break;
-                    }
+        foreach ($lessonsRef as $lesson) {
+            if (($lesson['date'] ?? null) === $date) {
+                $existingStart = strtotime($lesson['start_time']);
+                $existingEnd = strtotime($lesson['end_time']);
+                if (($newStart < $existingEnd) && ($newEnd > $existingStart)) {
+                    $overlap = true;
+                    break;
                 }
             }
-
-            return response()->json(['overlap' => $overlap]);
-
-        } catch (\Exception $e) {
-            // If this returns an error, your JS 'catch' block will trigger the alert
-            return response()->json(['error' => $e->getMessage()], 500);
         }
+
+        return response()->json(['overlap' => $overlap]);
     }
 
     /* =========================================================
