@@ -77,7 +77,7 @@ Route::middleware([SessionMiddleware::class])->group(function() {
 
         // Grading
         Route::post('/assignments/grade-submission/{id}', [GradeController::class, 'addGrading'])->name('submissions.addGrading');
-        Route::post('/assignments/edit-grade/{id}', [GradeController::class, 'editGrading'])->name('submissions.editGrading');
+        Route::post('/assignments/grade-submission/edit/{id}', [GradeController::class, 'editGrading'])->name('submissions.editGrading');
     });
 
     // --- Admin & Utility ---
