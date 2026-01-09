@@ -1,4 +1,4 @@
-# Stage 1 - Build Frontend (Vite)
+# frontend build
 FROM node:18 AS frontend
 WORKDIR /app
 COPY package*.json ./
@@ -6,37 +6,37 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# Stage 2 - Backend
+# build backend
 FROM php:8.4-fpm AS backend
 
-# Install system dependencies + gRPC requirements
+# reqss
 RUN apt-get update && apt-get install -y \
     git curl unzip libpq-dev libonig-dev libzip-dev zip \
     zlib1g-dev libicu-dev g++ \
     && docker-php-ext-install pdo pdo_mysql mbstring zip
 
-# Install gRPC and Protobuf (Required for Firebase/Firestore)
+# firebase reqqss???
 RUN pecl install grpc protobuf && \
     docker-php-ext-enable grpc protobuf
 
-# Install Composer
+#composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www
 COPY . .
 
-# Copy Vite assets
+#vite assets
 COPY --from=frontend /app/public/build ./public/build
 
-# Install PHP dependencies (Ensure composer.lock is fixed locally first!)
+#install php dependancies
 RUN composer install --no-dev --optimize-autoloader
 
-# Laravel setup including the STORAGE LINK
+#laravel setup++config
 RUN php artisan storage:link && \
     php artisan config:clear && \
     php artisan route:clear && \
     php artisan view:clear
 
-# Fix permissions for Render
+# permission
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
 # Expose the port for Render

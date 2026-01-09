@@ -54,46 +54,46 @@
             <!-- Bottom Content Grid -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
              <!-- Today's Classes -->
-<div class="bg-white rounded-2xl shadow-lg p-6">
-    <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-        <i class="fas fa-calendar-day text-purple-600"></i>
-        Today's Classes
-    </h2>
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                    <i class="fas fa-calendar-day text-purple-600"></i>
+                    Today's Classes
+                </h2>
 
-    <div class="space-y-4">
-       @if(count($lessons) > 0)
-    <div class="space-y-4">
-        @foreach($lessons as $lesson)
-            <div class="bg-white p-4 rounded-lg shadow">
-                <h3 class="text-lg font-semibold">
-                    {{ $lesson['subject_name'] }}
-                </h3>
+                <div class="space-y-4">
+                @if(count($lessons) > 0)
+                <div class="space-y-4">
+                    @foreach($lessons as $lesson)
+                        <div class="bg-white p-4 rounded-lg shadow">
+                            <h3 class="text-lg font-semibold">
+                                {{ $lesson['subject_name'] }}
+                            </h3>
 
-                <p class="text-sm text-gray-600">
-                    📚 Class Section:
-                    <span class="font-medium text-gray-800">
-                        {{ $lesson['class_section'] }}
-                    </span>
-                </p>
+                            <p class="text-sm text-gray-600">
+                                📚 Class Section:
+                                <span class="font-medium text-gray-800">
+                                    {{ $lesson['class_section'] }}
+                                </span>
+                            </p>
 
-                <p class="text-sm text-gray-600">
-                    🕒 Time:
-                    {{ $lesson['start_time'] }} – {{ $lesson['end_time'] }}
-                </p>
+                            <p class="text-sm text-gray-600">
+                                🕒 Time:
+                                {{ $lesson['start_time'] }} – {{ $lesson['end_time'] }}
+                            </p>
 
-                <p class="text-sm text-gray-600">
-                    📍 Location:
-                    {{ $lesson['locationmeeting_link'] }}
-                </p>
-            </div>
-        @endforeach
-    </div>
-@else
-    <div class="text-center py-10 text-gray-500">
-        <h2 class="text-xl font-semibold">No Classes Today</h2>
-        <p>Enjoy your free day!</p>
-    </div>
-@endif
+                            <p class="text-sm text-gray-600">
+                                📍 Location:
+                                {{ $lesson['locationmeeting_link'] }}
+                            </p>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <div class="text-center py-10 text-gray-500">
+                    <h2 class="text-xl font-semibold">No Classes Today</h2>
+                    <p>Enjoy your free day!</p>
+                </div>
+            @endif
 
     </div>
 </div>

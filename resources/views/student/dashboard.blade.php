@@ -24,19 +24,19 @@
             </div>
             <div class="flex items-center gap-6 relative">
 
-               <!-- Notification Button & Dropdown -->
+                <!-- Notification Button & Dropdown already in your HTML -->
 <div class="relative">
     <button id="notificationBtn" class="relative text-gray-600 hover:text-purple-600 transition focus:outline-none">
         <i class="fas fa-bell text-2xl"></i>
         <span id="notificationCount"
-              class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">
+            class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">
             0
         </span>
     </button>
 
     <div id="notificationDropdown"
-         class="hidden absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg z-50 flex flex-col"
-         style="max-height: calc(100vh - 120px);">
+        class="hidden absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg z-50 flex flex-col"
+        style="max-height: calc(100vh - 120px);">
         <div class="flex justify-between items-center px-4 py-3 border-b font-semibold text-gray-700">
             <span>Notifications</span>
             <button id="markAllRead" class="text-sm text-purple-600 hover:underline">Mark all read</button>
@@ -48,6 +48,7 @@
         </div>
     </div>
 </div>
+
 
                 <!-- User Info -->
                 <div class="flex items-center gap-3 cursor-pointer hover:bg-gray-50 rounded-xl p-2 transition">
@@ -75,46 +76,48 @@
 
         <!-- Bottom Content Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-           <!-- Today's Classes -->
-<div class="space-y-4">
-    <div class="bg-white rounded-xl shadow-md p-4">
-        <h2 class="text-lg font-semibold text-gray-800 mb-3">
-            {{ empty($todayLessons) ? 'No Classes Today' : "Today's Classes" }}
-        </h2>
-
-        @if(empty($todayLessons))
-            <div class="text-gray-500 flex flex-col items-center justify-center py-6 gap-2">
-                <i class="fas fa-calendar-xmark text-4xl"></i>
-                <span class="font-medium">Enjoy your free day!</span>
-            </div>
-        @else
+            <!-- Today's Classes -->
             <div class="space-y-4">
-                @foreach($todayLessons as $lesson)
-                    <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        
-                        <!-- Subject -->
-                        <h3 class="text-lg font-semibold text-gray-800">
-                            {{ $lesson['subject_name'] ?? 'Subject' }}
-                        </h3>
-
-                        <!-- Time -->
-                        <p class="text-sm text-gray-600 mt-1">
-                            🕒 Time:
-                            {{ $lesson['start_time'] ?? '' }} – {{ $lesson['end_time'] ?? '' }}
-                        </p>
-
-                        <!-- Location -->
-                        <p class="text-sm text-gray-600 mt-1">
-                            📍 Location:
-                            {{ $lesson['locationmeeting_link'] ?? 'Location' }}
-                        </p>
-
+                @if(isset($error))
+                    <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 text-red-600 text-sm">
+                        {{ $error }}
                     </div>
-                @endforeach
+                @else
+                    <div class="bg-white rounded-xl shadow-md p-4">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-3">
+                            @if(empty($todayLessons))
+                                No Classes Today
+                            @else
+                                Today's Classes
+                            @endif
+                        </h2>
+
+                        @if(empty($todayLessons))
+                            <div class="text-gray-500 flex flex-col items-center justify-center py-6 gap-2">
+                                <i class="fas fa-calendar-xmark text-4xl"></i>
+                                <span class="font-medium">Enjoy your free day!</span>
+                            </div>
+                        @else
+                            <div class="space-y-3">
+                                @foreach($todayLessons as $lesson)
+                                    <div class="bg-purple-50 border-l-4 border-purple-600 rounded-lg p-4 flex justify-between items-center hover:shadow-lg transition">
+                                        <div>
+                                            <div class="font-semibold text-gray-800">{{ $lesson['subject_name'] ?? 'Subject' }}</div>
+                                            <div class="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                                                <i class="fas fa-location-dot"></i>
+                                                {{ $lesson['locationmeeting_link'] ?? 'Location' }}
+                                            </div>
+                                        </div>
+                                        <div class="text-purple-600 font-semibold text-sm">
+                                            {{ $lesson['start_time'] }} – {{ $lesson['end_time'] }}
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                @endif
             </div>
-        @endif
-    </div>
-</div>
 
             <!-- Students in Class Today -->
             <div class="bg-white rounded-2xl shadow-lg p-6">
@@ -143,155 +146,207 @@
     </main>
 </div>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-
 <script>
-  // Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyB5rsKpQJGQZ591chvLNU_xNyKVIWSBRTk",
-    authDomain: "mycampus-f7b98.firebaseapp.com",
-    databaseURL: "https://mycampus-f7b98-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "mycampus-f7b98",
-    storageBucket: "mycampus-f7b98.firebasestorage.app",
-    messagingSenderId: "662548896164",
-    appId: "1:662548896164:web:39cc937ad9230877d34931"
-  };
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/eb302888-1413-4b84-8233-4d3812eb0896',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'student/dashboard.blade.php:149',message:'Script execution started',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+// #endregion
 
-  firebase.initializeApp(firebaseConfig);
-
-  const db = firebase.database();
-  const auth = firebase.auth();
-  const studentUid = "{{ session('firebase_user.uid') }}";
-  const firebaseCustomToken = "{{ $firebase_custom_token }}";
-
-  const notificationBtn = document.getElementById('notificationBtn');
-  const notificationDropdown = document.getElementById('notificationDropdown');
-  const notificationsList = document.getElementById('notificationsList');
-  const notificationCount = document.getElementById('notificationCount');
-  const noNotifications = document.getElementById('noNotifications');
-  const markAllReadBtn = document.getElementById('markAllRead');
-
-  let unreadCount = 0;
-
-  // Update badge
-  function updateBadge() {
-    if (unreadCount > 0) {
-      notificationCount.innerText = unreadCount;
-      notificationCount.classList.remove('hidden');
-    } else {
-      notificationCount.classList.add('hidden');
+    // Sidebar Toggle Script (Matching your other pages)
+    function toggleSidebar() {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/eb302888-1413-4b84-8233-4d3812eb0896',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'student/dashboard.blade.php:153',message:'toggleSidebar function definition executing',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        const sidebarTexts = document.querySelectorAll('.sidebar-text');
+        
+        if (sidebar.classList.contains('w-72')) {
+            // Collapse
+            sidebar.classList.remove('w-72');
+            sidebar.classList.add('w-20');
+            mainContent.classList.remove('ml-72');
+            mainContent.classList.add('ml-20');
+            sidebarTexts.forEach(text => text.classList.add('hidden'));
+        } else {
+            // Expand
+            sidebar.classList.remove('w-20');
+            sidebar.classList.add('w-72');
+            mainContent.classList.remove('ml-20');
+            mainContent.classList.add('ml-72');
+            sidebarTexts.forEach(text => text.classList.remove('hidden'));
+        }
     }
-  }
 
-  // Render a notification
-  function renderNotification(notification, key) {
-    if (document.getElementById(`noti-${key}`)) return;
+    
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        databaseURL: "{{ env('FIREBASE_DATABASE_URL') }}",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
 
-    const div = document.createElement('div');
-    div.id = `noti-${key}`;
-    div.className = 'p-3 flex justify-between items-start gap-2 cursor-pointer transition';
-    if (!notification.read) div.classList.add('rounded-lg', 'shadow-sm');
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
 
-    div.innerHTML = `
-      <div class="flex-1 flex flex-col gap-1">
-        <div class="flex items-center justify-between">
-          <span class="font-semibold px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700 flex items-center gap-2">
-            <i class="fas fa-bell"></i> Notification
-          </span>
-          <span class="text-xs text-gray-400">${notification.created_at ? new Date(notification.created_at).toLocaleString() : ''}</span>
-        </div>
-        <div class="text-sm text-gray-700 mt-1">${notification.message ?? ''}</div>
-      </div>
-      <button class="delete-notification text-gray-400 hover:text-red-500 ml-2 mt-1">
-        <i class="fas fa-xmark"></i>
-      </button>
-    `;
+    const db = firebase.database();
+    const studentUid = "{{ session('firebase_user.uid') }}";
 
-    // Mark as read
-    div.querySelector('.flex-1').addEventListener('click', () => {
-      if (!notification.read) {
-        db.ref(`notifications/${studentUid}/${key}`).update({ read: true });
-        notification.read = true;
-        div.classList.remove('shadow-sm');
-        unreadCount--;
-        updateBadge();
-      }
+    const notificationBtn = document.getElementById('notificationBtn');
+    const notificationDropdown = document.getElementById('notificationDropdown');
+    const notificationsList = document.getElementById('notificationsList');
+    const notificationCount = document.getElementById('notificationCount');
+    const noNotifications = document.getElementById('noNotifications');
+    const markAllReadBtn = document.getElementById('markAllRead');
+
+    let unreadCount = 0;
+
+    // Toggle dropdown
+    notificationBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        notificationDropdown.classList.toggle('hidden');
     });
+    document.addEventListener('click', () => notificationDropdown.classList.add('hidden'));
+    notificationDropdown.addEventListener('click', e => e.stopPropagation());
 
-    // Delete notification
-    div.querySelector('.delete-notification').addEventListener('click', e => {
-      e.stopPropagation();
-      if (!confirm('Delete this notification?')) return;
-      db.ref(`notifications/${studentUid}/${key}`).remove();
-      div.remove();
-      if (!notification.read) unreadCount--;
-      updateBadge();
-      if (!notificationsList.children.length) noNotifications.classList.remove('hidden');
-    });
+    // Update unread badge
+    function updateBadge() {
+        if (unreadCount > 0) {
+            notificationCount.innerText = unreadCount;
+            notificationCount.classList.remove('hidden');
+        } else {
+            notificationCount.classList.add('hidden');
+        }
+    }
 
-    // Prepend latest on top
-    notificationsList.prepend(div);
-  }
+    // Render a single notification
+    function renderNotification(notification, key, prepend = true) {
+        if (document.getElementById(`noti-${key}`)) return; // prevent duplicates
 
-  // Toggle dropdown
-  notificationBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    notificationDropdown.classList.toggle('hidden');
-  });
-  document.addEventListener('click', () => notificationDropdown.classList.add('hidden'));
-  notificationDropdown.addEventListener('click', e => e.stopPropagation());
+        const div = document.createElement('div');
+        div.id = `noti-${key}`;
+        div.className = 'p-3 transition flex justify-between items-start gap-2 cursor-pointer';
+        if (!notification.read) div.classList.add('bg-gray-100', 'rounded-lg');
 
-  // Mark all as read
-  markAllReadBtn.addEventListener('click', () => {
-    db.ref(`notifications/${studentUid}`).once('value', snapshot => {
-      snapshot.forEach(child => {
-        db.ref(`notifications/${studentUid}/${child.key}`).update({ read: true });
-      });
-      unreadCount = 0;
-      updateBadge();
-      document.querySelectorAll('#notificationsList .shadow-sm').forEach(div => div.classList.remove('shadow-sm'));
-    });
-  });
+        // Notification type label
+        let typeLabel = '';
+        let typeColor = '';
+        switch(notification.type) {
+            case 'lesson_cancelled':
+                typeLabel = 'Class Cancelled';
+                typeColor = 'text-red-600';
+                break;
+            case 'lesson_time_changed':
+                typeLabel = 'Time Changed';
+                typeColor = 'text-yellow-600';
+                break;
+            case 'lesson_location_changed':
+                typeLabel = 'Place Changed';
+                typeColor = 'text-blue-600';
+                break;
+            default:
+                typeLabel = 'Notification';
+                typeColor = 'text-gray-800';
+        }
 
-  // Sign in with custom token
-  auth.signInWithCustomToken(firebaseCustomToken)
-    .then(() => {
-      console.log("✅ Student signed in to Firebase");
+        div.innerHTML = `
+            <div class="flex-1 notification-body">
+                <div class="${typeColor} font-semibold">${typeLabel}</div>
+                <div class="text-sm text-gray-700 mt-1">${notification.message ?? ''}</div>
+                <div class="text-xs text-gray-500 mt-1">Class Date: ${notification.class_date ?? 'N/A'}</div>
+                <div class="text-xs text-gray-400 mt-1">${notification.created_at ? new Date(notification.created_at).toLocaleString() : ''}</div>
+            </div>
+            <button class="delete-notification text-gray-400 hover:text-red-500 ml-2">
+                <i class="fas fa-xmark"></i>
+            </button>
+        `;
 
-      // Load last 50 notifications
-      db.ref(`notifications/${studentUid}`).limitToLast(50).once('value', snapshot => {
+        // Mark as read
+        div.querySelector('.notification-body').addEventListener('click', () => {
+            if (!notification.read) {
+                db.ref(`notifications/${studentUid}/${key}`).update({ read: true });
+                notification.read = true;
+                div.classList.remove('bg-gray-100');
+                unreadCount--;
+                updateBadge();
+            }
+        });
+
+        // Delete notification
+        div.querySelector('.delete-notification').addEventListener('click', e => {
+            e.stopPropagation();
+            if (!confirm('Delete this notification?')) return;
+
+            db.ref(`notifications/${studentUid}/${key}`).remove();
+            div.remove();
+            if (!notification.read) unreadCount--;
+            updateBadge();
+
+            if (!notificationsList.children.length) noNotifications.classList.remove('hidden');
+        });
+
+        if (prepend) notificationsList.prepend(div);
+        else notificationsList.appendChild(div);
+    }
+
+    // Load existing notifications
+    db.ref(`notifications/${studentUid}`).limitToLast(50).once('value', snapshot => {
         notificationsList.innerHTML = '';
         unreadCount = 0;
-        if (!snapshot.exists()) {
-          noNotifications.classList.remove('hidden');
-          updateBadge();
-          return;
-        }
-        noNotifications.classList.add('hidden');
-        snapshot.forEach(child => {
-          const notification = child.val();
-          const key = child.key;
-          if (!notification.read) unreadCount++;
-          renderNotification(notification, key);
-        });
-        updateBadge();
-      });
 
-      // Listen for new notifications
-      db.ref(`notifications/${studentUid}`).on('child_added', snapshot => {
+        if (!snapshot.exists()) {
+            noNotifications.classList.remove('hidden');
+            updateBadge();
+            return;
+        }
+
+        noNotifications.classList.add('hidden');
+
+        snapshot.forEach(child => {
+            const notification = child.val();
+            const key = child.key;
+
+            if (!notification.read) unreadCount++;
+            renderNotification(notification, key, false);
+        });
+
+        updateBadge();
+    });
+
+    // Listen for new notifications
+    db.ref(`notifications/${studentUid}`).on('child_added', snapshot => {
         const notification = snapshot.val();
         const key = snapshot.key;
+
         if (document.getElementById(`noti-${key}`)) return;
+
         noNotifications.classList.add('hidden');
+
         if (!notification.read) unreadCount++;
-        renderNotification(notification, key);
+        renderNotification(notification, key, true);
         updateBadge();
-      });
-    })
-    .catch(error => console.error("❌ Firebase auth failed:", error));
+    });
+
+    // Mark all read
+    markAllReadBtn.addEventListener('click', () => {
+        db.ref(`notifications/${studentUid}`).once('value', snapshot => {
+            snapshot.forEach(child => {
+                db.ref(`notifications/${studentUid}/${child.key}`).update({ read: true });
+            });
+            unreadCount = 0;
+            updateBadge();
+
+            const items = notificationsList.querySelectorAll('.notification-body');
+            items.forEach(div => div.parentNode.classList.remove('bg-gray-100'));
+        });
+    });
+
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/eb302888-1413-4b84-8233-4d3812eb0896',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'student/dashboard.blade.php:339',message:'End of Firebase script, checking toggleSidebar',data:{toggleSidebarExists:typeof toggleSidebar!=='undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+// #endregion
 </script>
 
 </body>
